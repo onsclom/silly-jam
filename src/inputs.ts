@@ -20,6 +20,7 @@ export const justMoved = {
   left() {
     return (
       state.justPressed.includes("ArrowLeft") ||
+      state.justPressed.includes("a") ||
       gamepads.singlePlayer.buttonJustPressed(Button.DpadLeft) ||
       gamepads.singlePlayer.leftStick.motion().direction.x === Motion.Left
     );
@@ -27,6 +28,7 @@ export const justMoved = {
   right() {
     return (
       state.justPressed.includes("ArrowRight") ||
+      state.justPressed.includes("d") ||
       gamepads.singlePlayer.buttonJustPressed(Button.DpadRight) ||
       gamepads.singlePlayer.leftStick.motion().direction.x === Motion.Right
     );
@@ -34,6 +36,7 @@ export const justMoved = {
   up() {
     return (
       state.justPressed.includes("ArrowUp") ||
+      state.justPressed.includes("w") ||
       gamepads.singlePlayer.buttonJustPressed(Button.DpadUp) ||
       gamepads.singlePlayer.leftStick.motion().direction.y === Motion.Up
     );
@@ -41,6 +44,7 @@ export const justMoved = {
   down() {
     return (
       state.justPressed.includes("ArrowDown") ||
+      state.justPressed.includes("s") ||
       gamepads.singlePlayer.buttonJustPressed(Button.DpadDown) ||
       gamepads.singlePlayer.leftStick.motion().direction.y === Motion.Down
     );

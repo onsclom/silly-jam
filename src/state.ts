@@ -66,6 +66,8 @@ export const state = {
   keysDown: [] as string[],
   justPressed: [] as string[],
   justReleased: [] as string[],
+  shakeX: 0,
+  shakeY: 0,
 };
 
 export type State = typeof state;
