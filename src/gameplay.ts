@@ -6,6 +6,7 @@ import { isColliding, expDecay } from "./util";
 import { parseLevel } from "./parser";
 import { levels } from "./levels/levels";
 import { drawSprite, drawWall } from "./sprite";
+import { state } from "./state";
 
 const DEBUG = true;
 
@@ -26,6 +27,7 @@ function prepLevel(index: number) {
       z: entity === "player" ? 10 : 0,
     });
   }
+  console.log(state.entities);
   return parsed;
 }
 
@@ -176,18 +178,6 @@ export function update(state: State, dt: number) {
           removeEntity(burger.index);
           entity.goalW += burgerSizeChangeAmount;
           entity.goalH += burgerSizeChangeAmount;
-
-          // todo -- do this in a better way.
-          // win level:
-          if (!state.entities.some(({ type }) => type === "burger")) {
-            state.level = wrapLevel(state.level + 1);
-            prepLevel(state.level);
-            sfx("win").play();
-            const textarea = document.querySelector("textarea");
-            if (textarea) {
-              textarea.value = levels[state.level]!;
-            }
-          }
         }
       }
       for (const toilet of toilets) {
@@ -273,6 +263,17 @@ export function update(state: State, dt: number) {
           entity.h = savedH;
         }
       }
+    }
+  }
+
+  // can check for win once after all moving done
+  if (!state.entities.some(({ type }) => type === "burger")) {
+    state.level = wrapLevel(state.level + 1);
+    prepLevel(state.level);
+    sfx("win").play();
+    const textarea = document.querySelector("textarea");
+    if (textarea) {
+      textarea.value = levels[state.level]!;
     }
   }
 
