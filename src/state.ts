@@ -3,7 +3,7 @@ import * as Camera from "./camera";
 const MAX_ENTITIES = 512;
 
 export type Entity = {
-  type: "none" | "player" | "wall" | "burger" | "toilet" | "plate" | "poop";
+  type: "none" | "player" | "wall" | "burger" | "toilet" | "plate" | "poop" | "floor";
   index: number;
   x: number;
   y: number;

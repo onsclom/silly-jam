@@ -27,6 +27,12 @@ function prepLevel(index: number) {
   clearAllEntities();
   state.undoStack = [];
   state.pendingUndoSnapshot = null;
+  // create checkerboard floor tiles
+  for (let y = 0; y < parsed.level.height; y++) {
+    for (let x = 0; x < parsed.level.width; x++) {
+      createEntity({ type: "floor", x, y, w: 1, h: 1, z: -1 });
+    }
+  }
   for (const { entity, x, y } of parsed.entities) {
     createEntity({
       type: entity,
@@ -400,6 +406,10 @@ export function draw(state: State, ctx: CanvasRenderingContext2D) {
       const emoji = debugEmojis[entity.type as keyof typeof debugEmojis];
       if (emoji) {
         ctx.fillText(emoji, entity.x, entity.y);
+      }
+      if (entity.type === "floor") {
+        ctx.fillStyle = (entity.x + entity.y) % 2 === 0 ? "#222" : "#111";
+        ctx.fillRect(entity.x - 0.5, entity.y - 0.5, 1.01, 1.01);
       }
       if (entity.type === "wall") {
         drawWall(ctx, entity.x, entity.y, entity.index);
