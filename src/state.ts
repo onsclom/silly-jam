@@ -48,6 +48,14 @@ export function removeEntity(index: number) {
   entities[index] = createEmptyEntity(index);
 }
 
+export function clearAllEntities() {
+  entities.forEach((entity, index) => {
+    if (entity.type !== "none") {
+      removeEntity(index);
+    }
+  });
+}
+
 export const state = {
   level: 0,
   entities,

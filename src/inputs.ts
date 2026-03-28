@@ -47,7 +47,7 @@ export const justMoved = {
   },
 };
 
-export function justPressedRedo() {
+export function justPressedRestart() {
   const redoKey = "r";
   return (
     state.justPressed.includes(redoKey) ||

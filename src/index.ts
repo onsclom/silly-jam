@@ -1,6 +1,6 @@
 import { gamepads } from "@spud.gg/api";
 import { draw, update } from "./gameplay";
-import { createEntity, removeEntity, state } from "./state";
+import { clearAllEntities, createEntity, removeEntity, state } from "./state";
 import { resizeCanvasForDpi } from "./helpers";
 import { clearInputs } from "./inputs";
 import { parseLevel } from "./parser";
@@ -46,7 +46,7 @@ function addDebugControl() {
     const level = textarea.value;
     if (level) {
       const parsed = parseLevel(level.trim());
-      state.entities.forEach((_entity, i) => removeEntity(i));
+      clearAllEntities();
       for (const { entity, x, y } of parsed.entities) {
         createEntity({ type: entity, x, y, w: 1, h: 1 });
       }
