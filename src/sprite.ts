@@ -52,6 +52,6 @@ export function drawWall(
 ) {
   const wallIndexes = [0, 1, 2, 3];
   const spriteIndex = wallIndexes[i % wallIndexes.length]!;
-  const tileScale = 1 / sheet.frameWidthPx;
+  const tileScale = 1.01 / sheet.frameWidthPx;
   drawSprite(ctx, spriteIndex, x - 0.5, y - 0.5, tileScale);
 }

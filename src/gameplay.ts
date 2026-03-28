@@ -7,6 +7,12 @@ import { parseLevel } from "./parser";
 import { levels } from "./levels/levels";
 import { drawSprite, drawWall } from "./sprite";
 
+const DEBUG = true;
+
+function wrapLevel(index: number) {
+  return ((index % levels.length) + levels.length) % levels.length;
+}
+
 function prepLevel(index: number) {
   const parsed = parseLevel(levels[index]!);
   clearAllEntities();
@@ -24,6 +30,19 @@ function prepLevel(index: number) {
 }
 
 export function update(state: State, dt: number) {
+  if (DEBUG) {
+    if (state.justPressed.includes("q")) {
+      state.level = wrapLevel(state.level - 1);
+      prepLevel(state.level);
+      return;
+    }
+    if (state.justPressed.includes("e")) {
+      state.level = wrapLevel(state.level + 1);
+      prepLevel(state.level);
+      return;
+    }
+  }
+
   if (justPressedRestart()) {
     prepLevel(state.level);
     return;
@@ -161,7 +180,7 @@ export function update(state: State, dt: number) {
           // todo -- do this in a better way.
           // win level:
           if (!state.entities.some(({ type }) => type === "burger")) {
-            state.level++;
+            state.level = wrapLevel(state.level + 1);
             prepLevel(state.level);
             sfx("win").play();
             const textarea = document.querySelector("textarea");
