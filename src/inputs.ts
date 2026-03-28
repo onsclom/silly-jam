@@ -2,6 +2,7 @@ import { Button, gamepads, Motion } from "@spud.gg/api";
 import { state } from "./state";
 
 window.addEventListener("keydown", (e) => {
+  if (e.repeat) return;
   state.keysDown.push(e.key);
   state.justPressed.push(e.key);
 });
