@@ -1,6 +1,6 @@
 import * as Camera from "./camera";
 
-const MAX_ENTITIES = 256;
+const MAX_ENTITIES = 512;
 
 export type Entity = {
   type: "none" | "player" | "wall" | "burger" | "toilet";
