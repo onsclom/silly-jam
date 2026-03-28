@@ -1,10 +1,4 @@
-import {
-  State,
-  clearAllEntities,
-  createEntity,
-  removeEntity,
-  state,
-} from "./state";
+import { State, clearAllEntities, createEntity, removeEntity } from "./state";
 import { chompSound, sfx } from "./audio";
 import { justMoved, justPressedRestart } from "./inputs";
 import * as Camera from "./camera";
