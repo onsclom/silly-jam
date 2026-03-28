@@ -1,6 +1,6 @@
 import { gamepads } from "@spud.gg/api";
 import { draw, update } from "./gameplay";
-import { clearAllEntities, createEntity, removeEntity, state } from "./state";
+import { clearAllEntities, createEntity, state } from "./state";
 import { resizeCanvasForDpi } from "./helpers";
 import { clearInputs } from "./inputs";
 import { parseLevel } from "./parser";
