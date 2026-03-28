@@ -60,6 +60,10 @@ export function justPressedRestart() {
   );
 }
 
+export function justPressedUndo() {
+  return state.justPressed.includes("u");
+}
+
 export function justPressedSelect() {
   return (
     state.justPressed.includes("Enter") ||
