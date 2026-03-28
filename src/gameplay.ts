@@ -6,7 +6,7 @@ import { isColliding } from "./util";
 import { parseLevel } from "./parser";
 
 // seb level
-// const level = `
+// export const level = `
 // ###############
 // ############  #
 // #####b    #t  #
@@ -26,29 +26,29 @@ import { parseLevel } from "./parser";
 // ###############`.trim();
 
 // tutorial 2
-export const level = `
-###################
-##                #
-##                #
-##                #
-##                #
-##   @            #
-###################
-`.trim();
-
-// // tutorial 1
-// const level = `
+// export const level = `
 // ###################
-// #b               b#
 // ##                #
-// ##    t#          #
-// ################# #
-// #@                #
+// ##                #
+// ##                #
+// ##                #
+// ##   @            #
 // ###################
 // `.trim();
 
+// // tutorial 1
+export const level = `
+###################
+#b               b#
+##                #
+##    t#          #
+################# #
+#@                #
+###################
+`.trim();
+
 // austin level
-// const level = `
+// export const level = `
 // ######################
 // ### t #### t##       #
 // ##  @ ##    ## ## ## #
