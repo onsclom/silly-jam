@@ -1,11 +1,14 @@
 import { gamepads } from "@spud.gg/api";
 import { draw, update } from "./gameplay";
-import { createEntity, state } from "./state";
+import { createEntity, removeEntity, state } from "./state";
 import { resizeCanvasForDpi } from "./helpers";
 import { clearInputs } from "./inputs";
+import { parseLevel } from "./parser";
 
 const canvas = document.createElement("canvas");
 document.body.appendChild(canvas);
+
+addDebugControl();
 
 const ctx = canvas.getContext("2d", { alpha: false })!;
 
@@ -34,3 +37,24 @@ function gameLoop(now: number) {
 }
 
 requestAnimationFrame(gameLoop);
+
+function addDebugControl() {
+  const levelPromptButton = document.createElement("button");
+  levelPromptButton.textContent = "Paste a level";
+  levelPromptButton.addEventListener("click", () => {
+    const level = prompt("Level?");
+    if (level) {
+      const parsed = parseLevel(level.trim());
+      state.entities.forEach((_entity, i) => removeEntity(i));
+      for (const { entity, x, y } of parsed.entities) {
+        createEntity({ type: entity, x, y, w: 1, h: 1 });
+      }
+    }
+  });
+  levelPromptButton.style = `
+    position: fixed;
+    top: 10px;
+    left: 10px;
+  `;
+  document.body.appendChild(levelPromptButton);
+}
