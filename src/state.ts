@@ -11,6 +11,8 @@ export type Entity = {
   h: number;
   goalW: number;
   goalH: number;
+  animatedW: number;
+  animatedH: number;
   vx: number;
   vy: number;
   z: number; // z-axis for drawing
@@ -26,6 +28,8 @@ function createEmptyEntity(index: number): Entity {
     h: 0,
     goalW: 0,
     goalH: 0,
+    animatedW: 0,
+    animatedH: 0,
     vx: 0,
     vy: 0,
     z: 0,
@@ -40,9 +44,11 @@ export function createEntity(entity: Partial<Entity>) {
   const index = entities.findIndex((e) => e.type === "none");
   if (index === -1) throw new Error("probably should double max entities");
   const merged = { ...entities[index]!, ...entity };
-  // default goalW/goalH to match w/h if not explicitly set
+  // default goalW/goalH/animatedW/animatedH to match w/h if not explicitly set
   if (entity.goalW === undefined) merged.goalW = merged.w;
   if (entity.goalH === undefined) merged.goalH = merged.h;
+  if (entity.animatedW === undefined) merged.animatedW = merged.w;
+  if (entity.animatedH === undefined) merged.animatedH = merged.h;
   entities[index] = merged;
 }
 

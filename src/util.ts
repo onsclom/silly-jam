@@ -8,6 +8,13 @@ export function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
 }
 
+/** Exponential decay toward target. Returns new value, snaps to target when close enough. */
+export function expDecay(current: number, target: number, speed: number, dt: number, epsilon = 0.001): number {
+  const t = 1 - Math.exp((-speed * dt) / 1000);
+  const next = current + (target - current) * t;
+  return Math.abs(next - target) < epsilon ? target : next;
+}
+
 export function isColliding(entity1: Entity, entity2: Entity) {
   const l1 = entity1.x - entity1.w / 2;
   const r1 = entity1.x + entity1.w / 2;
