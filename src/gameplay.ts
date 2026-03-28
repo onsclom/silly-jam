@@ -36,7 +36,22 @@ import { parseLevel } from "./parser";
 // ###################
 // `.trim();
 
-// // tutorial 1
+// // tutorial 2
+// export const level = `
+// ###################
+// ##  #      b   #  #
+// ##                #
+// ##                #
+// ## b   b  b   b   #
+// #################b#
+// ##t               #
+// ##                #
+// #######     #######
+// #@               b#
+// ###################
+// `.trim();
+
+// tutorial 1
 export const level = `
 ###################
 #b               b#
