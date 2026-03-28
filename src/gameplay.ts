@@ -27,7 +27,6 @@ function prepLevel(index: number) {
       z: entity === "player" ? 10 : 0,
     });
   }
-  console.log(state.entities);
   return parsed;
 }
 
