@@ -2,7 +2,7 @@ import { State, clearAllEntities, createEntity, removeEntity } from "./state";
 import { chompSound, sfx } from "./audio";
 import { justMoved, justPressedRestart } from "./inputs";
 import * as Camera from "./camera";
-import { isColliding } from "./util";
+import { isColliding, expDecay } from "./util";
 import { parseLevel } from "./parser";
 import { levels } from "./levels/levels";
 
@@ -256,12 +256,25 @@ export function update(state: State, dt: number) {
     }
   }
 
-  const shakeSpeed = 20;
-  const t = 1 - Math.exp((-shakeSpeed * dt) / 1000);
-  state.shakeX += (0 - state.shakeX) * t;
-  state.shakeY += (0 - state.shakeY) * t;
-  if (Math.abs(state.shakeX) < 0.001) state.shakeX = 0;
-  if (Math.abs(state.shakeY) < 0.001) state.shakeY = 0;
+  state.shakeX = expDecay(state.shakeX, 0, 20, dt);
+  state.shakeY = expDecay(state.shakeY, 0, 20, dt);
+
+  for (const entity of state.entities) {
+    if (entity.type === "none") continue;
+    const growAnimationSpeed = 12;
+    entity.animatedW = expDecay(
+      entity.animatedW,
+      entity.w,
+      growAnimationSpeed,
+      dt,
+    );
+    entity.animatedH = expDecay(
+      entity.animatedH,
+      entity.h,
+      growAnimationSpeed,
+      dt,
+    );
+  }
 
   state.elapsedSeconds += dt / 1000;
 }
@@ -303,10 +316,10 @@ export function draw(state: State, ctx: CanvasRenderingContext2D) {
       .sort((a, b) => a.z - b.z);
     for (const entity of zAxisSortedEntities) {
       ctx.strokeRect(
-        entity.x - entity.w / 2,
-        entity.y - entity.h / 2,
-        entity.w,
-        entity.h,
+        entity.x - entity.animatedW / 2,
+        entity.y - entity.animatedH / 2,
+        entity.animatedW,
+        entity.animatedH,
       );
 
       const debugEmojis = {
