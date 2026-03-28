@@ -75,6 +75,7 @@ export const state = {
   shakeX: 0,
   shakeY: 0,
   undoStack: [] as Entity[][],
+  pendingUndoSnapshot: null as Entity[] | null,
   undoTextOpacity: 0,
 };
 
