@@ -1,6 +1,12 @@
-import { State, clearAllEntities, createEntity, removeEntity } from "./state";
+import {
+  State,
+  Entity,
+  clearAllEntities,
+  createEntity,
+  removeEntity,
+} from "./state";
 import { chompSound, sfx } from "./audio";
-import { justMoved, justPressedRestart } from "./inputs";
+import { justMoved, justPressedRestart, justPressedUndo } from "./inputs";
 import * as Camera from "./camera";
 import { isColliding, expDecay } from "./util";
 import { parseLevel } from "./parser";
@@ -10,6 +16,8 @@ import { state } from "./state";
 
 const DEBUG = true;
 
+const MAX_UNDO_STACK = 128;
+
 function wrapLevel(index: number) {
   return ((index % levels.length) + levels.length) % levels.length;
 }
@@ -17,6 +25,8 @@ function wrapLevel(index: number) {
 function prepLevel(index: number) {
   const parsed = parseLevel(levels[index]!);
   clearAllEntities();
+  state.undoStack = [];
+  state.pendingUndoSnapshot = null;
   for (const { entity, x, y } of parsed.entities) {
     createEntity({
       type: entity,
@@ -49,6 +59,17 @@ export function update(state: State, dt: number) {
     return;
   }
 
+  if (justPressedUndo()) {
+    if (state.undoStack.length > 0) {
+      const snapshot = state.undoStack.pop()!;
+      for (let i = 0; i < state.entities.length; i++) {
+        Object.assign(state.entities[i]!, snapshot[i]!);
+      }
+      state.undoTextOpacity = 1;
+      return;
+    }
+  }
+
   const players = state.entities.filter((e) => e.type === "player");
   const walls = state.entities.filter((e) => e.type === "wall");
   const burgers = state.entities.filter((e) => e.type === "burger");
@@ -62,12 +83,16 @@ export function update(state: State, dt: number) {
   for (const player of players) {
     if (isEveryPlayerDoneMoving) {
       if (justMoved.left()) {
+        state.pendingUndoSnapshot = structuredClone(state.entities);
         player.vx = -1;
       } else if (justMoved.right()) {
+        state.pendingUndoSnapshot = structuredClone(state.entities);
         player.vx = 1;
       } else if (justMoved.up()) {
+        state.pendingUndoSnapshot = structuredClone(state.entities);
         player.vy = -1;
       } else if (justMoved.down()) {
+        state.pendingUndoSnapshot = structuredClone(state.entities);
         player.vy = 1;
       }
     }
@@ -153,6 +178,21 @@ export function update(state: State, dt: number) {
         const shakeStrength = 0.4;
         state.shakeX = -lastVx * shakeStrength;
         state.shakeY = -lastVy * shakeStrength;
+
+        // commit pending undo snapshot only if the move was meaningful
+        if (state.pendingUndoSnapshot) {
+          const prev = state.pendingUndoSnapshot.find((e) => e.index === entity.index);
+          const movedEnough =
+            prev &&
+            (Math.abs(entity.x - prev.x) > 0.01 ||
+              Math.abs(entity.y - prev.y) > 0.01);
+          if (movedEnough) {
+            state.undoStack.push(state.pendingUndoSnapshot);
+            if (state.undoStack.length > MAX_UNDO_STACK)
+              state.undoStack.shift();
+          }
+          state.pendingUndoSnapshot = null;
+        }
       }
 
       const burgerSizeChangeAmount = 0.5;
@@ -278,6 +318,7 @@ export function update(state: State, dt: number) {
 
   state.shakeX = expDecay(state.shakeX, 0, 20, dt);
   state.shakeY = expDecay(state.shakeY, 0, 20, dt);
+  state.undoTextOpacity = expDecay(state.undoTextOpacity, 0, 5, dt);
 
   for (const entity of state.entities) {
     if (entity.type === "none") continue;
@@ -360,4 +401,15 @@ export function draw(state: State, ctx: CanvasRenderingContext2D) {
       }
     }
   });
+
+  if (state.undoTextOpacity > 0.01) {
+    const { width, height } = ctx.canvas.getBoundingClientRect();
+    ctx.globalAlpha = state.undoTextOpacity;
+    ctx.fillStyle = "white";
+    ctx.font = "bold 48px sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("UNDO", width / 2, height / 2);
+    ctx.globalAlpha = 1;
+  }
 }

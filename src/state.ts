@@ -74,6 +74,8 @@ export const state = {
   justReleased: [] as string[],
   shakeX: 0,
   shakeY: 0,
+  undoStack: [] as Entity[][],
+  undoTextOpacity: 0,
 };
 
 export type State = typeof state;
