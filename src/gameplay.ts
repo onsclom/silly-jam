@@ -130,8 +130,8 @@ export function update(state: State, dt: number) {
       if (hitWall) {
         sfx("hitWall").play({ detune: Math.random() * 1000 - 500 });
         const shakeStrength = 0.4;
-        state.shakeX = lastVx * shakeStrength;
-        state.shakeY = lastVy * shakeStrength;
+        state.shakeX = -lastVx * shakeStrength;
+        state.shakeY = -lastVy * shakeStrength;
       }
 
       const burgerSizeChangeAmount = 0.5;
