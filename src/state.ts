@@ -49,6 +49,7 @@ export function removeEntity(index: number) {
 }
 
 export const state = {
+  level: 0,
   entities,
   camera: Camera.create(),
   elapsedSeconds: 0,

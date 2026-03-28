@@ -1,9 +1,10 @@
 import { gamepads } from "@spud.gg/api";
-import { draw, level, update } from "./gameplay";
+import { draw, update } from "./gameplay";
 import { createEntity, removeEntity, state } from "./state";
 import { resizeCanvasForDpi } from "./helpers";
 import { clearInputs } from "./inputs";
 import { parseLevel } from "./parser";
+import { levels } from "./levels/levels";
 
 const canvas = document.createElement("canvas");
 document.body.appendChild(canvas);
@@ -40,7 +41,7 @@ requestAnimationFrame(gameLoop);
 
 function addDebugControl() {
   const textarea = document.createElement("textarea");
-  textarea.value = level;
+  textarea.value = levels[0]!;
   const updateLevel = () => {
     const level = textarea.value;
     if (level) {
