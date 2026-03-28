@@ -1,4 +1,3 @@
-import { Button, gamepads } from "@spud.gg/api";
 import { State, createEntity, removeEntity } from "./state";
 import { chompSound, sfx } from "./audio";
 import { justMoved } from "./inputs";
