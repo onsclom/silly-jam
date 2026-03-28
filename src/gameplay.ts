@@ -5,6 +5,7 @@ import * as Camera from "./camera";
 import { isColliding, expDecay } from "./util";
 import { parseLevel } from "./parser";
 import { levels } from "./levels/levels";
+import { drawSprite, drawWall } from "./sprite";
 
 function prepLevel(index: number) {
   const parsed = parseLevel(levels[index]!);
@@ -303,8 +304,8 @@ export function draw(state: State, ctx: CanvasRenderingContext2D) {
 
   Camera.drawWithCamera(ctx, state.camera, (ctx) => {
     // lets draw a rect around the game area
-    ctx.strokeStyle = "red";
-    ctx.strokeRect(-0.5, -0.5, gameArea.width, gameArea.height);
+    // ctx.strokeStyle = "red";
+    // ctx.strokeRect(-0.5, -0.5, gameArea.width, gameArea.height);
 
     ctx.strokeStyle = "white";
     ctx.textAlign = "center";
@@ -315,16 +316,17 @@ export function draw(state: State, ctx: CanvasRenderingContext2D) {
       .filter((e) => e.type !== "none")
       .sort((a, b) => a.z - b.z);
     for (const entity of zAxisSortedEntities) {
-      ctx.strokeRect(
-        entity.x - entity.animatedW / 2,
-        entity.y - entity.animatedH / 2,
-        entity.animatedW,
-        entity.animatedH,
-      );
+      if (entity.type === "player") {
+        ctx.strokeRect(
+          entity.x - entity.animatedW / 2,
+          entity.y - entity.animatedH / 2,
+          entity.animatedW,
+          entity.animatedH,
+        );
+      }
 
       const debugEmojis = {
         player: "👤",
-        wall: "🧱",
         burger: "🍔",
         toilet: "🚽",
         plate: "🍽️",
@@ -333,6 +335,9 @@ export function draw(state: State, ctx: CanvasRenderingContext2D) {
       const emoji = debugEmojis[entity.type as keyof typeof debugEmojis];
       if (emoji) {
         ctx.fillText(emoji, entity.x, entity.y);
+      }
+      if (entity.type === "wall") {
+        drawWall(ctx, entity.x, entity.y, entity.index);
       }
     }
   });
