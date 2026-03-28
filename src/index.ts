@@ -1,5 +1,5 @@
 import { gamepads } from "@spud.gg/api";
-import { draw, update } from "./gameplay";
+import { draw, level, update } from "./gameplay";
 import { createEntity, removeEntity, state } from "./state";
 import { resizeCanvasForDpi } from "./helpers";
 import { clearInputs } from "./inputs";
@@ -39,10 +39,10 @@ function gameLoop(now: number) {
 requestAnimationFrame(gameLoop);
 
 function addDebugControl() {
-  const levelPromptButton = document.createElement("button");
-  levelPromptButton.textContent = "Paste a level";
-  levelPromptButton.addEventListener("click", () => {
-    const level = prompt("Level?");
+  const textarea = document.createElement("textarea");
+  textarea.value = level;
+  const updateLevel = () => {
+    const level = textarea.value;
     if (level) {
       const parsed = parseLevel(level.trim());
       state.entities.forEach((_entity, i) => removeEntity(i));
@@ -50,11 +50,15 @@ function addDebugControl() {
         createEntity({ type: entity, x, y, w: 1, h: 1 });
       }
     }
-  });
-  levelPromptButton.style = `
+  };
+
+  textarea.onkeydown = (e) => e.stopPropagation();
+  textarea.onblur = updateLevel;
+
+  textarea.style = `
     position: fixed;
     top: 10px;
     left: 10px;
   `;
-  document.body.appendChild(levelPromptButton);
+  document.body.appendChild(textarea);
 }
