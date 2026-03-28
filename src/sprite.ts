@@ -1,11 +1,3 @@
-/*
-  small sprites will be automatically inlined by Vite.
-  sprite files larger than the default 4kb assetsInlineLimit will be
-  optimized and fetched after the initial bundle has loaded.
-  read more at https://vite.dev/guide/assets#importing-asset-as-url
-
-  moon sprite credit: https://deep-fold.itch.io/pixel-planet-generator
-*/
 import sprite from "./assets/images/sprite.png";
 
 type SpriteSheet = {
@@ -15,18 +7,18 @@ type SpriteSheet = {
   frameCount: number;
 };
 
-export const moonSheet: SpriteSheet = {
+const sheet: SpriteSheet = {
   image: new Image(),
-  frameWidthPx: 50,
-  frameHeightPx: 50,
-  frameCount: 5000 / 50,
+  frameWidthPx: 259,
+  frameHeightPx: 259,
+  frameCount: 6,
 };
 
-moonSheet.image.src = sprite;
+sheet.image.src = sprite;
 
 export function drawSprite(
   ctx: CanvasRenderingContext2D,
-  sheet: SpriteSheet,
+  // sheet: SpriteSheet,
   frameIndex: number,
   x: number,
   y: number,
@@ -50,4 +42,16 @@ export function drawSprite(
     drawWidthPx,
     drawHeightPx,
   );
+}
+
+export function drawWall(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  i: number,
+) {
+  const wallIndexes = [0, 1, 2, 3];
+  const spriteIndex = wallIndexes[i % wallIndexes.length]!;
+  const tileScale = 1 / sheet.frameWidthPx;
+  drawSprite(ctx, spriteIndex, x - 0.5, y - 0.5, tileScale);
 }
