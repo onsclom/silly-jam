@@ -13,6 +13,7 @@ import chomp6Url from "./assets/audio/chomp6.wav";
 import gasp1Url from "./assets/audio/gasp1.wav";
 import gulp1Url from "./assets/audio/gulp1.wav";
 import toilet1Url from "./assets/audio/toilet1.wav";
+import winUrl from "./assets/audio/win.mp3";
 
 import menuMusicUrl from "./assets/audio/menu-music.mp3";
 
@@ -31,6 +32,7 @@ export const sfx = audio.createSounds({
   gasp: { url: gasp1Url },
   gulp: { url: gulp1Url },
   toilet: { url: toilet1Url },
+  win: { url: winUrl },
 });
 
 let chompIndex = 0;
