@@ -1,117 +1,17 @@
-import { State, createEntity, removeEntity } from "./state";
+import { State, createEntity, removeEntity, state } from "./state";
 import { chompSound, sfx } from "./audio";
 import { justMoved } from "./inputs";
 import * as Camera from "./camera";
 import { isColliding } from "./util";
 import { parseLevel } from "./parser";
+import { levels } from "./levels/levels";
 
-// seb level
-// export const level = `
-// ###############
-// ############  #
-// #####b    #t  #
-// ##### #       #
-// ##### #       #
-// ## ## #########
-// #b    #b   ####
-// ## #    b    ##
-// ## #          #
-// ## #@        t#
-// ##  ###       #
-// ##    b       #
-// ##            #
-// ##            #
-// ##            #
-// ##          ###
-// ###############`.trim();
-
-// tutorial 2
-// export const level = `
-// ###################
-// ##                #
-// ##                #
-// ##                #
-// ##                #
-// ##   @            #
-// ###################
-// `.trim();
-
-// medium difficulty
-// export const level = `
-// ###################
-// ####             t#
-// #b #              #
-// ##      #      #  #
-// ##             #  #
-// ## @        bb    #
-// #### ##  ###### #b#
-// ##                #
-// ##                #
-// ##t      #        #
-// #################b#
-// ###################
-// `.trim();
-
-// tutorial 3
-// export const level = `
-// ###################
-// ##b #             #
-// ##                #
-// ## @    b         #
-// ################bb#
-// ##tt #            #
-// ##                #
-// ##                #
-// ##       ###b     #
-// ###################
-// `.trim();
-
-// // tutorial 2
-// export const level = `
-// ###################
-// ##  #      b   #  #
-// ##                #
-// ##                #
-// ## b   b  b   b   #
-// #################b#
-// ##t               #
-// ##                #
-// #######     #######
-// #@               b#
-// ###################
-// `.trim();
-
-// tutorial 1
-export const level = `
-###################
-#b               b#
-##                #
-##    t#          #
-################# #
-#@                #
-###################
-`.trim();
-
-// austin level
-// export const level = `
-// ######################
-// ### t #### t##       #
-// ##  @ ##    ## ## ## #
-// #              ## ## #
-// ####        ## ##   b#
-// ### ###     ## ###  b#
-// ##        # ## ###  t#
-// ##        #### #######
-// ##     #b ####  #   ##
-// ##b #     ###       ##
-// ###       ###  b  t ##
-// ### #   #######     ##
-// ######################
-// `.trim();
-
-const parsed = parseLevel(level);
-for (const { entity, x, y } of parsed.entities) {
-  createEntity({ type: entity, x, y, w: 1, h: 1 });
+function prepLevel(index: number) {
+  const parsed = parseLevel(levels[index]!);
+  for (const { entity, x, y } of parsed.entities) {
+    createEntity({ type: entity, x, y, w: 1, h: 1 });
+  }
+  return parsed;
 }
 
 export function update(state: State, dt: number) {
@@ -214,6 +114,15 @@ export function update(state: State, dt: number) {
           removeEntity(burger.index);
           entity.goalW += burgerSizeChangeAmount;
           entity.goalH += burgerSizeChangeAmount;
+
+          // todo -- do this in a better way.
+          // win level:
+          if (!state.entities.some(({ type }) => type === "burger")) {
+            state.entities.forEach((_entity, i) => removeEntity(i));
+            state.level++;
+            prepLevel(state.level);
+            sfx("win").play();
+          }
         }
       }
       for (const toilet of toilets) {
@@ -297,8 +206,11 @@ export function update(state: State, dt: number) {
   state.elapsedSeconds += dt / 1000;
 }
 
+prepLevel(0);
+
 export function draw(state: State, ctx: CanvasRenderingContext2D) {
   const { width, height } = ctx.canvas.getBoundingClientRect();
+
   const center = {
     x: width / 2,
     y: height / 2,
@@ -309,11 +221,11 @@ export function draw(state: State, ctx: CanvasRenderingContext2D) {
   ctx.lineWidth = 0.02;
 
   const gameArea = {
-    width: parsed.level.width,
-    height: parsed.level.height,
+    width: Math.max(...state.entities.map((entity) => entity.x)),
+    height: Math.max(...state.entities.map((entity) => entity.y)),
   };
-  state.camera.x = (parsed.level.width - 1) / 2;
-  state.camera.y = (parsed.level.height - 1) / 2;
+  state.camera.x = (gameArea.width - 1) / 2;
+  state.camera.y = (gameArea.height - 1) / 2;
   state.camera.zoom = Camera.aspectFitZoom(
     ctx.canvas.getBoundingClientRect(),
     gameArea.width,
@@ -323,7 +235,7 @@ export function draw(state: State, ctx: CanvasRenderingContext2D) {
   Camera.drawWithCamera(ctx, state.camera, (ctx) => {
     // lets draw a rect around the game area
     ctx.strokeStyle = "red";
-    ctx.strokeRect(-0.5, -0.5, parsed.level.width, parsed.level.height);
+    ctx.strokeRect(-0.5, -0.5, gameArea.width, gameArea.height);
 
     ctx.strokeStyle = "white";
     ctx.textAlign = "center";
