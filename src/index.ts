@@ -24,7 +24,7 @@ function gameLoop(now: number) {
 
   {
     timeToProcessPhysics += dt;
-    const physicsTickMs = 1000 / 120; // process physics updates at a fixed 120hz time step
+    const physicsTickMs = 1000 / 500; // need to allow fast movement speed without glitches
     while (timeToProcessPhysics > physicsTickMs) {
       timeToProcessPhysics -= physicsTickMs;
       update(state, physicsTickMs);

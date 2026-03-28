@@ -3,7 +3,7 @@ import * as Camera from "./camera";
 const MAX_ENTITIES = 512;
 
 export type Entity = {
-  type: "none" | "player" | "wall" | "burger" | "toilet";
+  type: "none" | "player" | "wall" | "burger" | "toilet" | "plate" | "poop";
   index: number;
   x: number;
   y: number;
@@ -13,6 +13,7 @@ export type Entity = {
   goalH: number;
   vx: number;
   vy: number;
+  z: number; // z-axis for drawing
 };
 
 function createEmptyEntity(index: number): Entity {
@@ -27,6 +28,7 @@ function createEmptyEntity(index: number): Entity {
     goalH: 0,
     vx: 0,
     vy: 0,
+    z: 0,
   };
 }
 

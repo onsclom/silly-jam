@@ -10,7 +10,14 @@ function prepLevel(index: number) {
   const parsed = parseLevel(levels[index]!);
   clearAllEntities();
   for (const { entity, x, y } of parsed.entities) {
-    createEntity({ type: entity, x, y, w: 1, h: 1 });
+    createEntity({
+      type: entity,
+      x,
+      y,
+      w: 1,
+      h: 1,
+      z: entity === "player" ? 10 : 0,
+    });
   }
   return parsed;
 }
@@ -46,11 +53,12 @@ export function update(state: State, dt: number) {
   }
 
   for (const entity of state.entities) {
-    const movementSpeed = 10;
+    const movementSpeed = 30;
     entity.x += (entity.vx * movementSpeed * dt) / 1000;
     entity.y += (entity.vy * movementSpeed * dt) / 1000;
 
     if (entity.type === "player") {
+      let hitWall = false;
       for (const wall of walls) {
         if (isColliding(entity, wall)) {
           const eLeft = entity.x - entity.w / 2;
@@ -73,20 +81,32 @@ export function update(state: State, dt: number) {
           const resolveX = () => {
             if (overlapLeft < overlapRight) {
               entity.x = wLeft - entity.w / 2;
-              if (entity.vx > 0) entity.vx = 0;
+              if (entity.vx > 0) {
+                entity.vx = 0;
+                hitWall = true;
+              }
             } else {
               entity.x = wRight + entity.w / 2;
-              if (entity.vx < 0) entity.vx = 0;
+              if (entity.vx < 0) {
+                entity.vx = 0;
+                hitWall = true;
+              }
             }
           };
 
           const resolveY = () => {
             if (overlapTop < overlapBottom) {
               entity.y = wTop - entity.h / 2;
-              if (entity.vy > 0) entity.vy = 0;
+              if (entity.vy > 0) {
+                hitWall = true;
+                entity.vy = 0;
+              }
             } else {
               entity.y = wBottom + entity.h / 2;
-              if (entity.vy < 0) entity.vy = 0;
+              if (entity.vy < 0) {
+                hitWall = true;
+                entity.vy = 0;
+              }
             }
           };
 
@@ -105,6 +125,10 @@ export function update(state: State, dt: number) {
           break;
         }
       }
+      if (hitWall) {
+        console.log("hit wall");
+        sfx("hitWall").play({ detune: Math.random() * 1000 - 500 });
+      }
 
       const burgerSizeChangeAmount = 0.5;
 
@@ -117,7 +141,10 @@ export function update(state: State, dt: number) {
           )
         ) {
           chompSound();
+          const bx = burger.x,
+            by = burger.y;
           removeEntity(burger.index);
+          createEntity({ type: "plate", x: bx, y: by, w: 0.5, h: 0.5, z: -1 });
           entity.goalW += burgerSizeChangeAmount;
           entity.goalH += burgerSizeChangeAmount;
 
@@ -145,7 +172,10 @@ export function update(state: State, dt: number) {
           // only use toilet if there was burger eaten
           if (entity.goalW > 1) {
             sfx("toilet").play();
+            const tx = toilet.x,
+              ty = toilet.y;
             removeEntity(toilet.index);
+            createEntity({ type: "poop", x: tx, y: ty, w: 0.5, h: 0.5, z: -1 });
             entity.goalW -= burgerSizeChangeAmount;
             entity.goalH -= burgerSizeChangeAmount;
           }
@@ -247,21 +277,24 @@ export function draw(state: State, ctx: CanvasRenderingContext2D) {
     ctx.textBaseline = "middle";
     ctx.font = "1px sans-serif";
 
-    for (const entity of state.entities) {
-      if (entity.type !== "none") {
-        ctx.strokeRect(
-          entity.x - entity.w / 2,
-          entity.y - entity.h / 2,
-          entity.w,
-          entity.h,
-        );
-      }
+    const zAxisSortedEntities = state.entities
+      .filter((e) => e.type !== "none")
+      .sort((a, b) => a.z - b.z);
+    for (const entity of zAxisSortedEntities) {
+      ctx.strokeRect(
+        entity.x - entity.w / 2,
+        entity.y - entity.h / 2,
+        entity.w,
+        entity.h,
+      );
 
       const debugEmojis = {
         player: "👤",
         wall: "🧱",
         burger: "🍔",
         toilet: "🚽",
+        plate: "🍽️",
+        poop: "💩",
       };
       const emoji = debugEmojis[entity.type as keyof typeof debugEmojis];
       if (emoji) {
