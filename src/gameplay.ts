@@ -58,6 +58,8 @@ export function update(state: State, dt: number) {
     entity.y += (entity.vy * movementSpeed * dt) / 1000;
 
     if (entity.type === "player") {
+      const lastVx = entity.vx;
+      const lastVy = entity.vy;
       let hitWall = false;
       for (const wall of walls) {
         if (isColliding(entity, wall)) {
@@ -126,8 +128,10 @@ export function update(state: State, dt: number) {
         }
       }
       if (hitWall) {
-        console.log("hit wall");
         sfx("hitWall").play({ detune: Math.random() * 1000 - 500 });
+        const shakeStrength = 0.4;
+        state.shakeX = lastVx * shakeStrength;
+        state.shakeY = lastVy * shakeStrength;
       }
 
       const burgerSizeChangeAmount = 0.5;
@@ -141,10 +145,15 @@ export function update(state: State, dt: number) {
           )
         ) {
           chompSound();
-          const bx = burger.x,
-            by = burger.y;
+          createEntity({
+            type: "plate",
+            x: burger.x,
+            y: burger.y,
+            w: 0.5,
+            h: 0.5,
+            z: -1,
+          });
           removeEntity(burger.index);
-          createEntity({ type: "plate", x: bx, y: by, w: 0.5, h: 0.5, z: -1 });
           entity.goalW += burgerSizeChangeAmount;
           entity.goalH += burgerSizeChangeAmount;
 
@@ -172,10 +181,15 @@ export function update(state: State, dt: number) {
           // only use toilet if there was burger eaten
           if (entity.goalW > 1) {
             sfx("toilet").play();
-            const tx = toilet.x,
-              ty = toilet.y;
+            createEntity({
+              type: "poop",
+              x: toilet.x,
+              y: toilet.y,
+              w: 0.5,
+              h: 0.5,
+              z: -1,
+            });
             removeEntity(toilet.index);
-            createEntity({ type: "poop", x: tx, y: ty, w: 0.5, h: 0.5, z: -1 });
             entity.goalW -= burgerSizeChangeAmount;
             entity.goalH -= burgerSizeChangeAmount;
           }
@@ -242,6 +256,13 @@ export function update(state: State, dt: number) {
     }
   }
 
+  const shakeSpeed = 20;
+  const t = 1 - Math.exp((-shakeSpeed * dt) / 1000);
+  state.shakeX += (0 - state.shakeX) * t;
+  state.shakeY += (0 - state.shakeY) * t;
+  if (Math.abs(state.shakeX) < 0.001) state.shakeX = 0;
+  if (Math.abs(state.shakeY) < 0.001) state.shakeY = 0;
+
   state.elapsedSeconds += dt / 1000;
 }
 
@@ -259,8 +280,8 @@ export function draw(state: State, ctx: CanvasRenderingContext2D) {
     width: Math.max(...state.entities.map((entity) => entity.x)) + 1,
     height: Math.max(...state.entities.map((entity) => entity.y)) + 1,
   };
-  state.camera.x = (gameArea.width - 1) / 2;
-  state.camera.y = (gameArea.height - 1) / 2;
+  state.camera.x = (gameArea.width - 1) / 2 + state.shakeX;
+  state.camera.y = (gameArea.height - 1) / 2 + state.shakeY;
   state.camera.zoom = Camera.aspectFitZoom(
     ctx.canvas.getBoundingClientRect(),
     gameArea.width,
