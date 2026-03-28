@@ -133,6 +133,10 @@ export function update(state: State, dt: number) {
             state.level++;
             prepLevel(state.level);
             sfx("win").play();
+            const textarea = document.querySelector("textarea");
+            if (textarea) {
+              textarea.value = levels[state.level]!;
+            }
           }
         }
       }
