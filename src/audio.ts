@@ -55,7 +55,7 @@ export function chompSound() {
 export const menuMusic = audio.createMusic({
   url: menuMusicUrl,
   loop: true,
-  volume: 0,
+  volume: 0.4,
 });
 
 /*
