@@ -181,7 +181,9 @@ export function update(state: State, dt: number) {
 
         // commit pending undo snapshot only if the move was meaningful
         if (state.pendingUndoSnapshot) {
-          const prev = state.pendingUndoSnapshot.find((e) => e.index === entity.index);
+          const prev = state.pendingUndoSnapshot.find(
+            (e) => e.index === entity.index,
+          );
           const movedEnough =
             prev &&
             (Math.abs(entity.x - prev.x) > 0.01 ||
@@ -350,12 +352,15 @@ export function draw(state: State, ctx: CanvasRenderingContext2D) {
   ctx.strokeStyle = "white";
   ctx.lineWidth = 0.02;
 
+  const margin = 1;
   const gameArea = {
-    width: Math.max(...state.entities.map((entity) => entity.x)) + 1,
-    height: Math.max(...state.entities.map((entity) => entity.y)) + 1,
+    width:
+      Math.max(...state.entities.map((entity) => entity.x)) + 1 + margin * 2,
+    height:
+      Math.max(...state.entities.map((entity) => entity.y)) + 1 + margin * 2,
   };
-  state.camera.x = (gameArea.width - 1) / 2 + state.shakeX;
-  state.camera.y = (gameArea.height - 1) / 2 + state.shakeY;
+  state.camera.x = (gameArea.width - 1) / 2 - margin + state.shakeX;
+  state.camera.y = (gameArea.height - 1) / 2 - margin + state.shakeY;
   state.camera.zoom = Camera.aspectFitZoom(
     ctx.canvas.getBoundingClientRect(),
     gameArea.width,
