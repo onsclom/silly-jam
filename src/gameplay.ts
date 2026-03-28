@@ -1,6 +1,12 @@
-import { State, createEntity, removeEntity, state } from "./state";
+import {
+  State,
+  clearAllEntities,
+  createEntity,
+  removeEntity,
+  state,
+} from "./state";
 import { chompSound, sfx } from "./audio";
-import { justMoved } from "./inputs";
+import { justMoved, justPressedRestart } from "./inputs";
 import * as Camera from "./camera";
 import { isColliding } from "./util";
 import { parseLevel } from "./parser";
@@ -8,6 +14,7 @@ import { levels } from "./levels/levels";
 
 function prepLevel(index: number) {
   const parsed = parseLevel(levels[index]!);
+  clearAllEntities();
   for (const { entity, x, y } of parsed.entities) {
     createEntity({ type: entity, x, y, w: 1, h: 1 });
   }
@@ -15,6 +22,11 @@ function prepLevel(index: number) {
 }
 
 export function update(state: State, dt: number) {
+  if (justPressedRestart()) {
+    prepLevel(state.level);
+    return;
+  }
+
   const players = state.entities.filter((e) => e.type === "player");
   const walls = state.entities.filter((e) => e.type === "wall");
   const burgers = state.entities.filter((e) => e.type === "burger");
@@ -118,7 +130,6 @@ export function update(state: State, dt: number) {
           // todo -- do this in a better way.
           // win level:
           if (!state.entities.some(({ type }) => type === "burger")) {
-            state.entities.forEach((_entity, i) => removeEntity(i));
             state.level++;
             prepLevel(state.level);
             sfx("win").play();
@@ -209,20 +220,16 @@ export function update(state: State, dt: number) {
 prepLevel(0);
 
 export function draw(state: State, ctx: CanvasRenderingContext2D) {
-  const { width, height } = ctx.canvas.getBoundingClientRect();
-
-  const center = {
-    x: width / 2,
-    y: height / 2,
-  };
+  // const { width, height } = ctx.canvas.getBoundingClientRect();
+  // const center = { x: width / 2, y: height / 2 };
 
   ctx.fillStyle = "#0b0d1a";
   ctx.strokeStyle = "white";
   ctx.lineWidth = 0.02;
 
   const gameArea = {
-    width: Math.max(...state.entities.map((entity) => entity.x)),
-    height: Math.max(...state.entities.map((entity) => entity.y)),
+    width: Math.max(...state.entities.map((entity) => entity.x)) + 1,
+    height: Math.max(...state.entities.map((entity) => entity.y)) + 1,
   };
   state.camera.x = (gameArea.width - 1) / 2;
   state.camera.y = (gameArea.height - 1) / 2;
