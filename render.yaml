@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: silly-jam
+    runtime: static
+    pullRequestPreviewsEnabled: false
+    buildCommand: bun install && bun run build
+    staticPublishPath: ./dist
