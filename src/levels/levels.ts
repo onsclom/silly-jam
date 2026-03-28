@@ -170,4 +170,14 @@ export const levels = [
 ### #   #######     ##
 ######################
 `,
+  // roll credits? would be funnier if there were burgers out in the open
+  `
+#########################################
+#b b b b b b b b b b b b b b b b b b b b
+#########################################
+#@
+#########################################
+#b b b b b b b b b b b b b b b b b b b b
+#########################################
+`,
 ].map((s) => s.trim());
