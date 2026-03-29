@@ -26,8 +26,6 @@ import trumpet1 from "./assets/audio/trumpet1.mp3";
 import trumpet2 from "./assets/audio/trumpet2.mp3";
 import trumpet3 from "./assets/audio/trumpet3.mp3";
 
-import menuMusicUrl from "./assets/audio/menu-music.mp3";
-
 /*
   use createSounds for short, snappy SFX that you want pre-buffered
   for low-latency playback. we recommend creating your own effects
@@ -92,16 +90,6 @@ export function chompSound(player: Entity) {
   chompIndex = (chompIndex + 1) % chomps.length;
 }
 
-/*
-  createMusic is for longer tracks that can
-  stream and don't need frame-perfect timing.
-*/
-export const menuMusic = audio.createMusic({
-  url: menuMusicUrl,
-  loop: true,
-  volume: 0,
-});
-
 // idea if we want the player to make a sound when they kick off of a wall
 // or maybe instead of grunt we use a softer hitWall sound.
 // export function movementSound(player: Entity) {
@@ -129,9 +117,29 @@ export function hitWallSound(player: Entity) {
   });
 }
 
+export function tutorialKeySound() {
+  const grunts = [
+    "grunt1",
+    "grunt2",
+    "grunt3",
+    "grunt4",
+    "grunt5",
+    "grunt6",
+    "grunt7",
+    "grunt8",
+  ] as const;
+  const sound = grunts[Math.floor(Math.random() * grunts.length)]!;
+  sfx(sound).play({
+    volume: 0.25,
+  });
+  sfx("hitWall").play({
+    detune: Math.random() * 300 - 150,
+    volume: 0.3,
+  });
+}
+
 /*
   in spud demo mode (spud.isDemoMode === true), audio methods are no-ops.
-  that means you can always call sfx("...").play() or music.play() without
+  that means you can always call sfx("...").play() without
   adding conditional checks; the demo stays silent automatically.
 */
-menuMusic.play();

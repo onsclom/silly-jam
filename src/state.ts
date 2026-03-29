@@ -8,6 +8,7 @@ export type Entity = {
     | "player"
     | "wall"
     | "artwork"
+    | "glassShatterFx"
     | "glass"
     | "burger"
     | "toilet"
@@ -31,6 +32,7 @@ export type Entity = {
   squishX: number; // scale multiplier for squash/stretch (1 = normal)
   squishY: number;
   artworkSpriteIndex: number;
+  shatterFxStartedAt: number;
   glassState: 0 | 1 | 2; // 0=solid, 1=cracked, 2=shattered
   moveStartedAgainstCrackedGlassIndex: number; // player-only: rest move into glass ahead (solid or cracked), -1 = none
 };
@@ -55,6 +57,7 @@ function createEmptyEntity(index: number): Entity {
     squishX: 1,
     squishY: 1,
     artworkSpriteIndex: 10,
+    shatterFxStartedAt: -1,
     glassState: 0,
     moveStartedAgainstCrackedGlassIndex: -1,
   };
