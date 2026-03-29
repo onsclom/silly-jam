@@ -1,11 +1,5 @@
 import { State, clearAllEntities, createEntity, removeEntity } from "./state";
-import {
-  chompSound,
-  glassHitSound,
-  glassShatterSound,
-  hitWallSound,
-  sfx,
-} from "./audio";
+import { chompSound, hitWallSound, sfx, winSound } from "./audio";
 import {
   justMoved,
   justPressedRestart,
@@ -297,7 +291,7 @@ export function update(state: State, dt: number) {
         }
       }
       if (hitWall) {
-        const sizeScale = entity.w ** 1.5;
+        // const sizeScale = entity.w ** 1.5;
         hitWallSound(entity);
         const shakeStrength = 0.15 * entity.w ** 1.5;
         state.shakeX = -lastVx * shakeStrength;
@@ -463,7 +457,7 @@ export function update(state: State, dt: number) {
       undos: state.undos,
       restarts: state.restarts,
     };
-    sfx("win").play();
+    winSound();
   }
 
   state.shakeX = expDecay(state.shakeX, 0, 20, dt);

@@ -1,11 +1,7 @@
 import { audio } from "@spud.gg/api";
+import { Entity } from "./state";
 
-/*
-  when you import binary assets using vite, you'll get a url string.
-  read more at https://vite.dev/guide/assets#importing-asset-as-url
-*/
 import chomp1Url from "./assets/audio/chomp1.wav";
-// import chomp2Url from "./assets/audio/chomp2.wav";
 import chomp3Url from "./assets/audio/chomp3.wav";
 import chomp4Url from "./assets/audio/chomp4.wav";
 import chomp5Url from "./assets/audio/chomp5.wav";
@@ -14,7 +10,6 @@ import gasp1Url from "./assets/audio/gasp1.wav";
 import gulp1Url from "./assets/audio/gulp1.wav";
 import toilet1Url from "./assets/audio/toilet1.wav";
 import hitWallUrl from "./assets/audio/hit-wall.wav";
-import winUrl from "./assets/audio/win.mp3";
 import grunt1Url from "./assets/audio/grunt1.wav";
 import grunt2Url from "./assets/audio/grunt2.wav";
 import grunt3Url from "./assets/audio/grunt3.wav";
@@ -27,9 +22,11 @@ import crunch from "./assets/audio/crunch.wav";
 import crunchGlass from "./assets/audio/crunch-break.wav";
 import glassShatter1 from "./assets/audio/glass-shatter-1.wav";
 import glassShatter2 from "./assets/audio/glass-shatter-2.wav";
+import trumpet1 from "./assets/audio/trumpet1.mp3";
+import trumpet2 from "./assets/audio/trumpet2.mp3";
+import trumpet3 from "./assets/audio/trumpet3.mp3";
 
 import menuMusicUrl from "./assets/audio/menu-music.mp3";
-import { Entity } from "./state";
 
 /*
   use createSounds for short, snappy SFX that you want pre-buffered
@@ -45,7 +42,9 @@ export const sfx = audio.createSounds({
   gasp: { url: gasp1Url },
   gulp: { url: gulp1Url },
   toilet: { url: toilet1Url },
-  win: { url: winUrl },
+  trumpet1: { url: trumpet1 },
+  trumpet2: { url: trumpet2 },
+  trumpet3: { url: trumpet3 },
   hitWall: { url: hitWallUrl },
   grunt1: { url: grunt1Url },
   grunt2: { url: grunt2Url },
@@ -60,6 +59,14 @@ export const sfx = audio.createSounds({
   glassShatter1: { url: glassShatter1 },
   glassShatter2: { url: glassShatter2 },
 });
+
+let winSoundIndex = 0;
+export function winSound() {
+  const sounds = ["trumpet1", "trumpet2", "trumpet3"] as const;
+  const sound = sounds[winSoundIndex]!;
+  winSoundIndex = (winSoundIndex + 1) % sounds.length;
+  sfx(sound).play();
+}
 
 export function glassHitSound() {
   sfx("crunch").play({ detune: -300, volume: 0.1 });
