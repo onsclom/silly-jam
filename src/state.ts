@@ -100,6 +100,8 @@ export const state = {
   undos: 0,
   restarts: 0,
   winStats: { time: 0, moves: 0, undos: 0, restarts: 0 },
+  transitionTime: null as number | null, // null=inactive, negative=covering, positive=uncovering
+  transitionLevel: null as number | null, // level to switch to at midpoint
 };
 
 export type State = typeof state;

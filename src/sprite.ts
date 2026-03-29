@@ -10,7 +10,7 @@ type SpriteSheet = {
   frameCount: number;
 };
 
-const sheet: SpriteSheet = {
+export const sheet: SpriteSheet = {
   image: new Image(),
   frameWidthPx: 259,
   frameHeightPx: 259,
