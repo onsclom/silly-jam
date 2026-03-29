@@ -5,7 +5,7 @@ import { audio } from "@spud.gg/api";
   read more at https://vite.dev/guide/assets#importing-asset-as-url
 */
 import chomp1Url from "./assets/audio/chomp1.wav";
-import chomp2Url from "./assets/audio/chomp2.wav";
+// import chomp2Url from "./assets/audio/chomp2.wav";
 import chomp3Url from "./assets/audio/chomp3.wav";
 import chomp4Url from "./assets/audio/chomp4.wav";
 import chomp5Url from "./assets/audio/chomp5.wav";
@@ -25,7 +25,6 @@ import menuMusicUrl from "./assets/audio/menu-music.mp3";
 */
 export const sfx = audio.createSounds({
   chomp1: { url: chomp1Url },
-  chomp2: { url: chomp2Url },
   chomp3: { url: chomp3Url },
   chomp4: { url: chomp4Url },
   chomp5: { url: chomp5Url },
@@ -39,14 +38,7 @@ export const sfx = audio.createSounds({
 
 let chompIndex = 0;
 export function chompSound() {
-  const chomps = [
-    "chomp1",
-    "chomp2",
-    "chomp3",
-    "chomp4",
-    "chomp5",
-    "chomp6",
-  ] as const;
+  const chomps = ["chomp1", "chomp3", "chomp4", "chomp5", "chomp6"] as const;
   const sound = chomps[chompIndex]!;
   sfx(sound).play();
   chompIndex = (chompIndex + 1) % chomps.length;

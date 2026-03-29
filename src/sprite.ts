@@ -12,7 +12,7 @@ const sheet: SpriteSheet = {
   image: new Image(),
   frameWidthPx: 259,
   frameHeightPx: 259,
-  frameCount: 16,
+  frameCount: 20,
 };
 
 sheet.image.src = sprite;
@@ -86,5 +86,28 @@ export function drawToilet(
   }
   const indexModifier = Math.floor(state.elapsedSeconds) % 2 === 0 ? 1 : 2;
   const index = toiletIndex + indexModifier;
+  drawSprite(ctx, index, x - 0.5, y - 0.5, 1 / sheet.frameWidthPx);
+}
+
+export function drawCrumbs(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  i: number,
+) {
+  const crumbIndexes = [16, 17, 18];
+  const index = crumbIndexes[i % crumbIndexes.length]!;
+  drawSprite(ctx, index, x - 0.5, y - 0.5, 1 / sheet.frameWidthPx);
+}
+
+// todo: figure out eating frames / timing
+export function drawGuy(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  size: "small" | "medium" | "large" | "xl",
+) {
+  // only for the "small" size:
+  const index = 10;
   drawSprite(ctx, index, x - 0.5, y - 0.5, 1 / sheet.frameWidthPx);
 }
