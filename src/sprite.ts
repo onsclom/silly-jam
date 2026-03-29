@@ -85,6 +85,40 @@ export function drawSprite(
   );
 }
 
+export const tutorialArrowSpriteByKey: Partial<
+  Record<string, { row: number; index: number }>
+> = {
+  ArrowUp: { row: 1, index: 15 },
+  ArrowDown: { row: 1, index: 16 },
+  ArrowLeft: { row: 1, index: 17 },
+  ArrowRight: { row: 1, index: 18 },
+};
+
+/** Draw a single main-sheet cell centered at `(cx, cy)` in pixel space. */
+export function drawSheetCellCentered(
+  ctx: CanvasRenderingContext2D,
+  frameIndex: number,
+  row: number,
+  cx: number,
+  cy: number,
+  sizePx: number,
+) {
+  const srcX = frameIndex * sheet.frameWidthPx;
+  const srcY = row * sheet.frameHeightPx;
+  const half = sizePx / 2;
+  ctx.drawImage(
+    sheet.image,
+    srcX,
+    srcY,
+    sheet.frameWidthPx,
+    sheet.frameHeightPx,
+    cx - half,
+    cy - half,
+    sizePx,
+    sizePx,
+  );
+}
+
 /** Draw one frame centered at `(cx, cy)`, scaled to a square of side `sizePx`. */
 export function drawBurgerBoyFrame(
   ctx: CanvasRenderingContext2D,
@@ -112,17 +146,17 @@ export function drawBurgerBoyFrame(
 // Auto-tile neighbor bitmask: top=1, right=2, bottom=4, left=8
 // Maps bitmask -> sprite index on row 2 of the sprite sheet
 const autoTileMap: Record<number, { row: number; index: number }> = {
-  0b0000: { row: 0, index: 4 },  // no neighbors
-  0b0001: { row: 1, index: 0 },  // top only
-  0b0011: { row: 1, index: 1 },  // top + right
-  0b1001: { row: 1, index: 2 },  // left + top
-  0b1100: { row: 1, index: 3 },  // left + bottom
-  0b0010: { row: 1, index: 4 },  // right only
-  0b1000: { row: 1, index: 5 },  // left only
-  0b0110: { row: 1, index: 6 },  // bottom + right
-  0b0100: { row: 1, index: 7 },  // bottom only
-  0b1010: { row: 1, index: 8 },  // left + right
-  0b0101: { row: 1, index: 9 },  // top + bottom
+  0b0000: { row: 0, index: 4 }, // no neighbors
+  0b0001: { row: 1, index: 0 }, // top only
+  0b0011: { row: 1, index: 1 }, // top + right
+  0b1001: { row: 1, index: 2 }, // left + top
+  0b1100: { row: 1, index: 3 }, // left + bottom
+  0b0010: { row: 1, index: 4 }, // right only
+  0b1000: { row: 1, index: 5 }, // left only
+  0b0110: { row: 1, index: 6 }, // bottom + right
+  0b0100: { row: 1, index: 7 }, // bottom only
+  0b1010: { row: 1, index: 8 }, // left + right
+  0b0101: { row: 1, index: 9 }, // top + bottom
 };
 
 // 9-patch compositing for 3- and 4-neighbor tiles.
@@ -184,10 +218,17 @@ function bakeCompositeTiles() {
 
       // Draw each quadrant from its source tile
       const positions = [
-        { dx: 0, dy: 0, sx: 0, sy: 0, w: halfW, h: halfH },           // top-left
+        { dx: 0, dy: 0, sx: 0, sy: 0, w: halfW, h: halfH }, // top-left
         { dx: halfW, dy: 0, sx: halfW, sy: 0, w: fw - halfW, h: halfH }, // top-right
         { dx: 0, dy: halfH, sx: 0, sy: halfH, w: halfW, h: fh - halfH }, // bottom-left
-        { dx: halfW, dy: halfH, sx: halfW, sy: halfH, w: fw - halfW, h: fh - halfH }, // bottom-right
+        {
+          dx: halfW,
+          dy: halfH,
+          sx: halfW,
+          sy: halfH,
+          w: fw - halfW,
+          h: fh - halfH,
+        }, // bottom-right
       ];
 
       for (let i = 0; i < 4; i++) {
@@ -195,7 +236,17 @@ function bakeCompositeTiles() {
         const pos = positions[i]!;
         const srcX = src.index * fw + pos.sx;
         const srcY = src.row * fh + pos.sy;
-        ctx.drawImage(img, srcX, srcY, pos.w, pos.h, pos.dx, pos.dy, pos.w, pos.h);
+        ctx.drawImage(
+          img,
+          srcX,
+          srcY,
+          pos.w,
+          pos.h,
+          pos.dx,
+          pos.dy,
+          pos.w,
+          pos.h,
+        );
       }
 
       store[mask] = c;
@@ -227,7 +278,17 @@ export function drawWall(
     const canvas = store[neighborMask];
     if (canvas) {
       const drawSize = sheet.frameWidthPx * tileScale;
-      ctx.drawImage(canvas, 0, 0, canvas.width, canvas.height, x - 0.5, y - 0.5, drawSize, drawSize);
+      ctx.drawImage(
+        canvas,
+        0,
+        0,
+        canvas.width,
+        canvas.height,
+        x - 0.5,
+        y - 0.5,
+        drawSize,
+        drawSize,
+      );
     }
   } else {
     const wallIndexes = [0, 1, 2, 3];

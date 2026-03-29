@@ -25,9 +25,11 @@ import {
   drawFloor,
   drawGlass,
   drawPlayer,
+  drawSheetCellCentered,
   drawToilet,
   drawWall,
   sheet,
+  tutorialArrowSpriteByKey,
 } from "./sprite";
 import { state } from "./state";
 import * as Renderer from "./renderer";
@@ -1062,12 +1064,24 @@ function drawControlsTutorial(
     ctx.lineWidth = ks * 0.04;
     ctx.stroke();
 
-    // label
-    ctx.font = `bold ${ks * 0.5}px handwriting`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillStyle = "white";
-    ctx.fillText(key.label, 0, 0);
+    const arrowSprite = tutorialArrowSpriteByKey[key.keys[0]!];
+    const iconSize = ks * 1.3;
+    if (arrowSprite && sheet.image.complete) {
+      drawSheetCellCentered(
+        ctx,
+        arrowSprite.index,
+        arrowSprite.row,
+        0,
+        0,
+        iconSize,
+      );
+    } else {
+      ctx.font = `bold ${ks * 0.5}px handwriting`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillStyle = "white";
+      ctx.fillText(key.label, 0, 0);
+    }
 
     ctx.restore();
   }
