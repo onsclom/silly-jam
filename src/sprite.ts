@@ -11,7 +11,7 @@ const sheet: SpriteSheet = {
   image: new Image(),
   frameWidthPx: 259,
   frameHeightPx: 259,
-  frameCount: 6,
+  frameCount: 16,
 };
 
 sheet.image.src = sprite;
@@ -54,4 +54,14 @@ export function drawWall(
   const spriteIndex = wallIndexes[i % wallIndexes.length]!;
   const tileScale = 1.01 / sheet.frameWidthPx;
   drawSprite(ctx, spriteIndex, x - 0.5, y - 0.5, tileScale);
+}
+
+// todo: slow 2-frame wobble animation in code
+export function drawBurger(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+) {
+  const burgerIndex = 8;
+  drawSprite(ctx, burgerIndex, x - 0.5, y - 0.5, 1 / sheet.frameWidthPx);
 }

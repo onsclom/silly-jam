@@ -11,7 +11,7 @@ import * as Camera from "./camera";
 import { isColliding, expDecay } from "./util";
 import { parseLevel } from "./parser";
 import { levels } from "./levels/levels";
-import { drawSprite, drawWall } from "./sprite";
+import { drawBurger, drawSprite, drawWall } from "./sprite";
 import { state } from "./state";
 
 const DEBUG = true;
@@ -430,7 +430,6 @@ export function draw(state: State, ctx: CanvasRenderingContext2D) {
 
       const debugEmojis = {
         player: "👤",
-        burger: "🍔",
         toilet: "🚽",
         plate: "🍽️",
         poop: "💩",
@@ -445,6 +444,9 @@ export function draw(state: State, ctx: CanvasRenderingContext2D) {
       }
       if (entity.type === "wall") {
         drawWall(ctx, entity.x, entity.y, entity.index);
+      }
+      if (entity.type === "burger") {
+        drawBurger(ctx, entity.x, entity.y);
       }
     }
   });
