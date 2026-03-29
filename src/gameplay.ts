@@ -1,5 +1,11 @@
 import { State, clearAllEntities, createEntity, removeEntity } from "./state";
-import { chompSound, hitWallSound, sfx } from "./audio";
+import {
+  chompSound,
+  glassHitSound,
+  glassShatterSound,
+  hitWallSound,
+  sfx,
+} from "./audio";
 import {
   justMoved,
   justPressedRestart,
@@ -738,7 +744,7 @@ function drawWinScreen(
   ctx.fillStyle = `rgba(0, 0, 0, ${overlayAlpha})`;
   ctx.fillRect(0, 0, width, height);
 
-  const letters = "LEvel CoMpLeTE".split("");
+  const letters = "LEveL CoMpLeTE".split("");
   const letterSpacing = fontSize * 0.7;
   const totalWidth = letters.length * letterSpacing;
   const startX = width / 2 - totalWidth / 2 + letterSpacing / 2;

@@ -23,6 +23,10 @@ import grunt5Url from "./assets/audio/grunt5.wav";
 import grunt6Url from "./assets/audio/grunt6.wav";
 import grunt7Url from "./assets/audio/grunt7.wav";
 import grunt8Url from "./assets/audio/grunt8.wav";
+import crunch from "./assets/audio/crunch.wav";
+import crunchGlass from "./assets/audio/crunch-break.wav";
+import glassShatter1 from "./assets/audio/glass-shatter-1.wav";
+import glassShatter2 from "./assets/audio/glass-shatter-2.wav";
 
 import menuMusicUrl from "./assets/audio/menu-music.mp3";
 import { Entity } from "./state";
@@ -51,7 +55,25 @@ export const sfx = audio.createSounds({
   grunt6: { url: grunt6Url },
   grunt7: { url: grunt7Url },
   grunt8: { url: grunt8Url },
+  crunch: { url: crunch },
+  crunchGlass: { url: crunchGlass },
+  glassShatter1: { url: glassShatter1 },
+  glassShatter2: { url: glassShatter2 },
 });
+
+export function glassHitSound() {
+  sfx("crunch").play({ detune: -300, volume: 0.1 });
+  sfx("crunchGlass").play({ volume: 0.5 });
+  sfx("hitWall").play({ volume: 0.2 });
+}
+
+export function glassShatterSound() {
+  const shatters = ["glassShatter1", "glassShatter2"] as const;
+  const sound = shatters[Math.floor(Math.random() * shatters.length)]!;
+  sfx("crunch").play({ volume: 0.1 });
+  sfx("crunchGlass").play({ volume: 0.3 });
+  sfx(sound).play({ volume: 0.2 });
+}
 
 let chompIndex = 0;
 export function chompSound(player: Entity) {
