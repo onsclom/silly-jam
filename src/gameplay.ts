@@ -249,6 +249,16 @@ export function update(state: State, dt: number) {
         state.shakeX = -lastVx * shakeStrength;
         state.shakeY = -lastVy * shakeStrength;
 
+        // squish & squash on wall impact
+        const squishAmount = 0.3;
+        if (lastVx !== 0) {
+          entity.squishX = 1 - squishAmount;
+          entity.squishY = 1 + squishAmount;
+        } else {
+          entity.squishX = 1 + squishAmount;
+          entity.squishY = 1 - squishAmount;
+        }
+
         // commit pending undo snapshot only if the move was meaningful
         if (state.pendingUndoSnapshot) {
           const prev = state.pendingUndoSnapshot.find(
@@ -387,13 +397,15 @@ export function update(state: State, dt: number) {
 
   // can check for win once after all moving done
   if (!state.entities.some(({ type }) => type === "burger")) {
-    state.level = wrapLevel(state.level + 1);
-    prepLevel(state.level);
+    state.winScreen = true;
+    state.winScreenTime = 0;
+    state.winStats = {
+      time: state.levelTime,
+      moves: state.moves,
+      undos: state.undos,
+      restarts: state.restarts,
+    };
     sfx("win").play();
-    const textarea = document.querySelector("textarea");
-    if (textarea) {
-      textarea.value = levels[state.level]!;
-    }
   }
 
   state.shakeX = expDecay(state.shakeX, 0, 20, dt);
@@ -415,6 +427,9 @@ export function update(state: State, dt: number) {
       growAnimationSpeed,
       dt,
     );
+    const squishDecaySpeed = 12;
+    entity.squishX = expDecay(entity.squishX, 1, squishDecaySpeed, dt);
+    entity.squishY = expDecay(entity.squishY, 1, squishDecaySpeed, dt);
   }
 
   state.levelTime += dt / 1000;

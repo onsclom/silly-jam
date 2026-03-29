@@ -26,6 +26,8 @@ export type Entity = {
   vx: number;
   vy: number;
   z: number; // z-axis for drawing
+  squishX: number; // scale multiplier for squash/stretch (1 = normal)
+  squishY: number;
 };
 
 function createEmptyEntity(index: number): Entity {
@@ -45,6 +47,8 @@ function createEmptyEntity(index: number): Entity {
     vx: 0,
     vy: 0,
     z: 0,
+    squishX: 1,
+    squishY: 1,
   };
 }
 
