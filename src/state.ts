@@ -1,9 +1,17 @@
 import * as Camera from "./camera";
 
-const MAX_ENTITIES = 512;
+const MAX_ENTITIES = 2056;
 
 export type Entity = {
-  type: "none" | "player" | "wall" | "burger" | "toilet" | "plate" | "poop" | "floor";
+  type:
+    | "none"
+    | "player"
+    | "wall"
+    | "burger"
+    | "toilet"
+    | "plate"
+    | "poop"
+    | "floor";
   index: number;
   x: number;
   y: number;
