@@ -1039,7 +1039,8 @@ function drawControlsTutorial(
 
     // origin position + gentle oscillation around it
     const bobX = Math.sin(t * key.bobSpeedX + key.bobPhase) * key.bobRadiusX;
-    const bobY = Math.cos(t * key.bobSpeedY + key.bobPhase * 1.3) * key.bobRadiusY;
+    const bobY =
+      Math.cos(t * key.bobSpeedY + key.bobPhase * 1.3) * key.bobRadiusY;
     const screenX = cx + key.originX * spacing + bobX;
     const screenY = cy + key.originY * spacing + bobY;
 
@@ -1085,7 +1086,6 @@ function drawControlsTutorial(
 
     ctx.restore();
   }
-
 }
 
 function drawTitleScreen(
@@ -1109,8 +1109,8 @@ function drawTitleScreen(
     ctx.scale(playerScale, playerScale);
     const wobble = Math.sin(state.elapsedSeconds * 2) * 0.05;
     ctx.rotate(wobble);
-    // frame 1 = first 330×330 cell (left)
-    drawBurgerBoyFrame(ctx, 0, 0, 0, playerSize);
+    const frameIndex = Math.floor(t / 0.5) % 2;
+    drawBurgerBoyFrame(ctx, frameIndex, 0, 0, playerSize);
     ctx.restore();
   }
 
