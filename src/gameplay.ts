@@ -17,12 +17,25 @@ import {
   drawPlayer,
   drawToilet,
   drawWall,
+  sheet,
 } from "./sprite";
 import { state } from "./state";
+import * as Renderer from "./renderer";
 
 const DEBUG = true;
+const SHADOWS_ENABLED = true; // @seb in case you don't like these
 const MAX_UNDO_STACK = 128;
 const WIN_SCREEN_INPUT_DELAY = 0.5; // prevents accidently startiong next level too soon
+
+// transition stuff
+const TRANSITION_COVER_TIME = 0.5;
+const TRANSITION_UNCOVER_TIME = 0.5;
+const BURGER_TILE_SIZE = 70; // px on screen
+
+function startTransition(level: number) {
+  state.transitionTime = -TRANSITION_COVER_TIME;
+  state.transitionLevel = level;
+}
 
 function wrapLevel(index: number) {
   return ((index % levels.length) + levels.length) % levels.length;
@@ -84,6 +97,46 @@ function prepLevel(index: number) {
 }
 
 export function update(state: State, dt: number) {
+  // advance transition
+  if (state.transitionTime !== null) {
+    const prev = state.transitionTime;
+    state.transitionTime += dt / 1000;
+
+    // crossed zero = midpoint, swap level
+    if (prev < 0 && state.transitionTime >= 0) {
+      const isRestart = state.transitionLevel === state.level;
+      const savedStats = {
+        levelTime: state.levelTime,
+        moves: state.moves,
+        undos: state.undos,
+        restarts: state.restarts,
+      };
+      state.level = state.transitionLevel!;
+      prepLevel(state.level);
+      if (isRestart) {
+        state.levelTime = savedStats.levelTime;
+        state.moves = savedStats.moves;
+        state.undos = savedStats.undos;
+        state.restarts = savedStats.restarts;
+      }
+      state.winScreen = false;
+      state.winScreenTime = 0;
+      const textarea = document.querySelector("textarea");
+      if (textarea) {
+        textarea.value = levels[state.level]!;
+      }
+    }
+
+    // done uncovering
+    if (state.transitionTime >= TRANSITION_UNCOVER_TIME) {
+      state.transitionTime = null;
+      state.transitionLevel = null;
+    }
+
+    state.elapsedSeconds += dt / 1000;
+    return;
+  }
+
   if (state.winScreen) {
     state.winScreenTime += dt / 1000;
     if (state.winScreenTime > WIN_SCREEN_INPUT_DELAY) {
@@ -95,14 +148,7 @@ export function update(state: State, dt: number) {
         justMoved.down() ||
         justPressedRestart()
       ) {
-        state.winScreen = false;
-        state.winScreenTime = 0;
-        state.level = wrapLevel(state.level + 1);
-        prepLevel(state.level);
-        const textarea = document.querySelector("textarea");
-        if (textarea) {
-          textarea.value = levels[state.level]!;
-        }
+        startTransition(wrapLevel(state.level + 1));
         return;
       }
     }
@@ -124,8 +170,8 @@ export function update(state: State, dt: number) {
   }
 
   if (justPressedRestart()) {
-    prepLevel(state.level);
     state.restarts++;
+    startTransition(state.level);
     return;
   }
 
@@ -245,10 +291,25 @@ export function update(state: State, dt: number) {
         }
       }
       if (hitWall) {
-        sfx("hitWall").play({ detune: Math.random() * 1000 - 500 });
+        const sizeScale = entity.w ** 1.5;
+        sfx("hitWall").play({
+          detune: Math.random() * 300 - 150,
+          volume: Math.min(2, sizeScale),
+          playbackRate: 1 / entity.w ** 0.5,
+        });
         const shakeStrength = 0.15 * entity.w ** 1.5;
         state.shakeX = -lastVx * shakeStrength;
         state.shakeY = -lastVy * shakeStrength;
+
+        // squish & squash on wall impact
+        const squishAmount = 0.3;
+        if (lastVx !== 0) {
+          entity.squishX = 1 - squishAmount;
+          entity.squishY = 1 + squishAmount;
+        } else {
+          entity.squishX = 1 + squishAmount;
+          entity.squishY = 1 - squishAmount;
+        }
 
         // commit pending undo snapshot only if the move was meaningful
         if (state.pendingUndoSnapshot) {
@@ -386,15 +447,21 @@ export function update(state: State, dt: number) {
     }
   }
 
-  // can check for win once after all moving done
-  if (!state.entities.some(({ type }) => type === "burger")) {
-    state.level = wrapLevel(state.level + 1);
-    prepLevel(state.level);
+  // only show win once the final bite animation has finished
+  const hasBurgersLeft = state.entities.some(({ type }) => type === "burger");
+  const playerStillEating = state.entities.some(
+    (entity) => entity.type === "player" && entity.eatProgress < 1,
+  );
+  if (!hasBurgersLeft && !playerStillEating) {
+    state.winScreen = true;
+    state.winScreenTime = 0;
+    state.winStats = {
+      time: state.levelTime,
+      moves: state.moves,
+      undos: state.undos,
+      restarts: state.restarts,
+    };
     sfx("win").play();
-    const textarea = document.querySelector("textarea");
-    if (textarea) {
-      textarea.value = levels[state.level]!;
-    }
   }
 
   state.shakeX = expDecay(state.shakeX, 0, 20, dt);
@@ -416,6 +483,9 @@ export function update(state: State, dt: number) {
       growAnimationSpeed,
       dt,
     );
+    const squishDecaySpeed = 12;
+    entity.squishX = expDecay(entity.squishX, 1, squishDecaySpeed, dt);
+    entity.squishY = expDecay(entity.squishY, 1, squishDecaySpeed, dt);
   }
 
   state.levelTime += dt / 1000;
@@ -457,61 +527,80 @@ export function draw(state: State, ctx: CanvasRenderingContext2D) {
     ctx.textBaseline = "middle";
     ctx.font = "1px sans-serif";
 
-    const zAxisSortedEntities = state.entities
-      .filter((e) => e.type !== "none")
-      .sort((a, b) => a.z - b.z);
-    for (const entity of zAxisSortedEntities) {
+    const SHADOW_OFFSET = 0.12;
+    const SHADOW_Z = -0.5; // between everything and floor
+
+    for (const entity of state.entities) {
+      if (entity.type === "none") continue;
+
+      // helper to submit a shadow version of a draw call
+      const submitShadow = !SHADOWS_ENABLED
+        ? () => {}
+        : (drawFn: (ctx: CanvasRenderingContext2D) => void) => {
+            Renderer.submit(SHADOW_Z, (ctx) => {
+              ctx.save();
+              ctx.translate(SHADOW_OFFSET, SHADOW_OFFSET);
+              drawFn(ctx);
+              ctx.restore();
+            });
+          };
+
       switch (entity.type) {
         case "player": {
-          // ctx.strokeRect(
-          //   entity.x - entity.animatedW / 2,
-          //   entity.y - entity.animatedH / 2,
-          //   entity.animatedW,
-          //   entity.animatedH,
-          // );
-          // todo:
-          // - facing left or right
-          // - squished effect
-          // - idle vs walk vs eat + grow animation
-          // - maybe a hand-drawn outline so rectangle is still visible?
-          drawPlayer(ctx, entity);
+          const e = entity;
+          submitShadow((ctx) => drawPlayer(ctx, e, true));
+          Renderer.submit(entity.z, (ctx) => drawPlayer(ctx, e));
           break;
         }
         case "floor": {
-          drawFloor(ctx, entity);
+          const e = entity;
+          Renderer.submit(entity.z, (ctx) => drawFloor(ctx, e));
           break;
         }
         case "wall": {
-          drawWall(ctx, entity.x, entity.y, entity.index);
+          const { x, y, index: i, z } = entity;
+          submitShadow((ctx) => drawWall(ctx, x, y, i, true));
+          Renderer.submit(z, (ctx) => drawWall(ctx, x, y, i));
           break;
         }
         case "burger": {
-          drawBurger(ctx, entity.x, entity.y);
+          const { x, y, z } = entity;
+          submitShadow((ctx) => drawBurger(ctx, x, y, true));
+          Renderer.submit(z, (ctx) => drawBurger(ctx, x, y));
           break;
         }
         case "toilet":
         case "poop": {
+          const { x, y, z, flipX } = entity;
           const isStinky = entity.type === "poop";
-          ctx.save();
-          if (isStinky) ctx.globalAlpha = 0.4;
-          if (entity.flipX) {
+          const drawIt = (ctx: CanvasRenderingContext2D, shadow = false) => {
             ctx.save();
-            ctx.translate(entity.x, entity.y);
-            ctx.scale(-1, 1);
-            drawToilet(ctx, 0, 0, isStinky);
+            if (isStinky) ctx.globalAlpha = 0.4;
+            if (flipX) {
+              ctx.save();
+              ctx.translate(x, y);
+              ctx.scale(-1, 1);
+              drawToilet(ctx, 0, 0, isStinky, shadow);
+              ctx.restore();
+            } else {
+              drawToilet(ctx, x, y, isStinky, shadow);
+            }
             ctx.restore();
-          } else {
-            drawToilet(ctx, entity.x, entity.y, isStinky);
-          }
-          ctx.restore();
+          };
+          if (!isStinky) submitShadow((ctx) => drawIt(ctx, true));
+          Renderer.submit(z, (ctx) => drawIt(ctx));
           break;
         }
         case "plate": {
-          drawCrumbs(ctx, entity.x, entity.y, entity.index);
+          const { x, y, index: i, z } = entity;
+          submitShadow((ctx) => drawCrumbs(ctx, x, y, i, true));
+          Renderer.submit(z, (ctx) => drawCrumbs(ctx, x, y, i));
           break;
         }
       }
     }
+
+    Renderer.flush(ctx);
   });
 
   // Level counter top-right
@@ -543,12 +632,92 @@ export function draw(state: State, ctx: CanvasRenderingContext2D) {
     ctx.font = "bold 48px sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText("UNDO", width / 2, height / 2);
+    ctx.shadowColor = "black";
+    ctx.shadowBlur = 0;
+    for (const [dx, dy] of [
+      [-2, 0],
+      [2, 0],
+      [0, -2],
+      [0, 2],
+    ]) {
+      ctx.shadowOffsetX = dx!;
+      ctx.shadowOffsetY = dy!;
+      ctx.fillText("UNDO", width / 2, height / 2);
+    }
+    ctx.shadowColor = "transparent";
     ctx.globalAlpha = 1;
   }
 
   if (state.winScreen) {
     drawWinScreen(state, ctx, width, height);
+  }
+
+  if (state.transitionTime !== null) {
+    drawTransition(ctx, width, height);
+  }
+}
+
+function drawTransition(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+) {
+  if (state.transitionTime === null) return;
+  const covering = state.transitionTime < 0;
+  // t goes 0→1 over each phase
+  const t = covering
+    ? clamp(
+        0,
+        (state.transitionTime + TRANSITION_COVER_TIME) / TRANSITION_COVER_TIME,
+        1,
+      )
+    : clamp(0, state.transitionTime / TRANSITION_UNCOVER_TIME, 1);
+
+  const cols = Math.ceil(width / BURGER_TILE_SIZE) + 1;
+  const rows = Math.ceil(height / BURGER_TILE_SIZE) + 1;
+  const maxDist = cols + rows;
+
+  const burgerFrame = 8;
+  const srcX = burgerFrame * sheet.frameWidthPx;
+  const srcSize = sheet.frameWidthPx;
+
+  const drawSize = BURGER_TILE_SIZE * 2.5;
+
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      const dist = col + row;
+      const delay = dist / maxDist;
+      const localT = clamp(0, (t - delay * 0.6) / 0.4, 1);
+      if (covering && localT <= 0) continue;
+
+      // cover: scale 0→1, uncover: scale 1→0
+      const eased = localT * (2 - localT); // ease out
+      const scale = covering ? eased : 1 - eased;
+      if (scale <= 0) continue;
+
+      const cx = col * BURGER_TILE_SIZE;
+      const cy = row * BURGER_TILE_SIZE;
+      const size = drawSize * scale;
+
+      const tiltAmount = covering ? 1 - localT : localT;
+      const tilt = (col % 2 === row % 2 ? 1 : -1) * 0.4 * tiltAmount;
+
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(tilt);
+      ctx.drawImage(
+        sheet.image,
+        srcX,
+        0,
+        srcSize,
+        srcSize,
+        -size / 2,
+        -size / 2,
+        size,
+        size,
+      );
+      ctx.restore();
+    }
   }
 }
 
@@ -573,7 +742,7 @@ function drawWinScreen(
   ctx.fillStyle = `rgba(0, 0, 0, ${overlayAlpha})`;
   ctx.fillRect(0, 0, width, height);
 
-  const letters = "LEVEL COMPLETED!".split("");
+  const letters = "LEVEL COMPLETE".split("");
   const letterSpacing = fontSize * 0.7;
   const totalWidth = letters.length * letterSpacing;
   const startX = width / 2 - totalWidth / 2 + letterSpacing / 2;

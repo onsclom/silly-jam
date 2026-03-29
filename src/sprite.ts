@@ -10,7 +10,7 @@ type SpriteSheet = {
   frameCount: number;
 };
 
-const sheet: SpriteSheet = {
+export const sheet: SpriteSheet = {
   image: new Image(),
   frameWidthPx: 259,
   frameHeightPx: 259,
@@ -21,23 +21,46 @@ sheet.image.src = sprite;
 const playerSheetImage = new Image();
 playerSheetImage.src = playerSprite;
 
+const SHADOW_COLOR = "#404040";
+
+function bakeShadow(img: HTMLImageElement): HTMLCanvasElement {
+  const c = document.createElement("canvas");
+  c.width = img.naturalWidth;
+  c.height = img.naturalHeight;
+  const ctx = c.getContext("2d")!;
+  ctx.drawImage(img, 0, 0);
+  ctx.globalCompositeOperation = "source-in";
+  ctx.fillStyle = SHADOW_COLOR;
+  ctx.fillRect(0, 0, c.width, c.height);
+  return c;
+}
+
+let sheetShadow: HTMLCanvasElement | null = null;
+let playerShadow: HTMLCanvasElement | null = null;
+sheet.image.addEventListener("load", () => {
+  sheetShadow = bakeShadow(sheet.image);
+});
+playerSheetImage.addEventListener("load", () => {
+  playerShadow = bakeShadow(playerSheetImage);
+});
+
 export function drawSprite(
   ctx: CanvasRenderingContext2D,
-  // sheet: SpriteSheet,
   frameIndex: number,
   x: number,
   y: number,
   scale = 1,
+  shadow = false,
 ) {
+  const img = shadow && sheetShadow ? sheetShadow : sheet.image;
   const frame = frameIndex % sheet.frameCount;
   const sourceX = frame * sheet.frameWidthPx;
   const sourceY = 0;
   const drawWidthPx = sheet.frameWidthPx * scale;
   const drawHeightPx = sheet.frameHeightPx * scale;
 
-  // see https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/drawImage
   ctx.drawImage(
-    sheet.image,
+    img,
     sourceX,
     sourceY,
     sheet.frameWidthPx,
@@ -54,17 +77,19 @@ export function drawWall(
   x: number,
   y: number,
   i: number,
+  shadow = false,
 ) {
   const wallIndexes = [0, 1, 2, 3];
   const spriteIndex = wallIndexes[i % wallIndexes.length]!;
   const tileScale = 1.01 / sheet.frameWidthPx;
-  drawSprite(ctx, spriteIndex, x - 0.5, y - 0.5, tileScale);
+  drawSprite(ctx, spriteIndex, x - 0.5, y - 0.5, tileScale, shadow);
 }
 
 export function drawBurger(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
+  shadow = false,
 ) {
   const rotate = Math.floor(state.elapsedSeconds * 3) % 2 === 0;
   const burgerIndex = 8;
@@ -73,7 +98,7 @@ export function drawBurger(
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(rotate ? Math.PI / 20 : -Math.PI / 20);
-  drawSprite(ctx, burgerIndex, -0.5, -0.5, tileScale);
+  drawSprite(ctx, burgerIndex, -0.5, -0.5, tileScale, shadow);
   ctx.restore();
 }
 
@@ -82,15 +107,16 @@ export function drawToilet(
   x: number,
   y: number,
   stinky: boolean,
+  shadow = false,
 ) {
   const toiletIndex = 9;
   if (!stinky) {
-    drawSprite(ctx, toiletIndex, x - 0.5, y - 0.5, 1 / sheet.frameWidthPx);
+    drawSprite(ctx, toiletIndex, x - 0.5, y - 0.5, 1 / sheet.frameWidthPx, shadow);
     return;
   }
   const indexModifier = Math.floor(state.elapsedSeconds) % 2 === 0 ? 1 : 2;
   const index = toiletIndex + indexModifier;
-  drawSprite(ctx, index, x - 0.5, y - 0.5, 1 / sheet.frameWidthPx);
+  drawSprite(ctx, index, x - 0.5, y - 0.5, 1 / sheet.frameWidthPx, shadow);
 }
 
 export function drawCrumbs(
@@ -98,10 +124,11 @@ export function drawCrumbs(
   x: number,
   y: number,
   i: number,
+  shadow = false,
 ) {
   const crumbIndexes = [16, 17, 18];
   const index = crumbIndexes[i % crumbIndexes.length]!;
-  drawSprite(ctx, index, x - 0.5, y - 0.5, 1 / sheet.frameWidthPx);
+  drawSprite(ctx, index, x - 0.5, y - 0.5, 1 / sheet.frameWidthPx, shadow);
 }
 
 const frames = {
@@ -142,7 +169,7 @@ const frames = {
   },
 };
 
-export function drawPlayer(ctx: CanvasRenderingContext2D, entity: Entity) {
+export function drawPlayer(ctx: CanvasRenderingContext2D, entity: Entity, shadow = false) {
   const sizeKeys = ["small", "medium", "large", "xl", "xxl"] as const;
   const sizeStep = 0.5;
   const sizeIndex = Math.max(
@@ -175,11 +202,13 @@ export function drawPlayer(ctx: CanvasRenderingContext2D, entity: Entity) {
   if (moving) {
     ctx.rotate(wobbleLeft ? Math.PI / 20 : -Math.PI / 20);
   }
+  ctx.scale(entity.squishX, entity.squishY);
   if (entity.flipX) {
     ctx.scale(-1, 1);
   }
+  const img = shadow && playerShadow ? playerShadow : playerSheetImage;
   ctx.drawImage(
-    playerSheetImage,
+    img,
     frame.x,
     frame.y,
     frame.w,

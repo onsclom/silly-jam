@@ -26,6 +26,8 @@ export type Entity = {
   vx: number;
   vy: number;
   z: number; // z-axis for drawing
+  squishX: number; // scale multiplier for squash/stretch (1 = normal)
+  squishY: number;
 };
 
 function createEmptyEntity(index: number): Entity {
@@ -45,6 +47,8 @@ function createEmptyEntity(index: number): Entity {
     vx: 0,
     vy: 0,
     z: 0,
+    squishX: 1,
+    squishY: 1,
   };
 }
 
@@ -96,6 +100,8 @@ export const state = {
   undos: 0,
   restarts: 0,
   winStats: { time: 0, moves: 0, undos: 0, restarts: 0 },
+  transitionTime: null as number | null, // null=inactive, negative=covering, positive=uncovering
+  transitionLevel: null as number | null, // level to switch to at midpoint
 };
 
 export type State = typeof state;
