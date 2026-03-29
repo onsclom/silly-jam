@@ -521,7 +521,7 @@ export function draw(state: State, ctx: CanvasRenderingContext2D) {
     ctx.strokeStyle = "white";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.font = "1px sans-serif";
+    ctx.font = "1px handwriting";
 
     const SHADOW_OFFSET = 0.12;
     const SHADOW_Z = -0.5; // between everything and floor
@@ -604,7 +604,7 @@ export function draw(state: State, ctx: CanvasRenderingContext2D) {
     const padding = 16;
     const levelFontSize = Math.min(width, height) * 0.035;
     ctx.save();
-    ctx.font = `bold ${levelFontSize}px sans-serif`;
+    ctx.font = `bold ${levelFontSize}px handwriting`;
     ctx.textAlign = "right";
     ctx.textBaseline = "top";
     ctx.fillStyle = "rgba(0, 0, 0, 0)";
@@ -625,7 +625,7 @@ export function draw(state: State, ctx: CanvasRenderingContext2D) {
   if (state.undoTextOpacity > 0.01) {
     ctx.globalAlpha = state.undoTextOpacity;
     ctx.fillStyle = "white";
-    ctx.font = "bold 48px sans-serif";
+    ctx.font = "bold 48px handwriting";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.shadowColor = "black";
@@ -738,7 +738,7 @@ function drawWinScreen(
   ctx.fillStyle = `rgba(0, 0, 0, ${overlayAlpha})`;
   ctx.fillRect(0, 0, width, height);
 
-  const letters = "LEVEL COMPLETE".split("");
+  const letters = "LEvel CoMpLeTE".split("");
   const letterSpacing = fontSize * 0.7;
   const totalWidth = letters.length * letterSpacing;
   const startX = width / 2 - totalWidth / 2 + letterSpacing / 2;
@@ -760,7 +760,7 @@ function drawWinScreen(
     const y = titleY + waveY;
 
     ctx.save();
-    ctx.font = `bold ${fontSize}px sans-serif`;
+    ctx.font = `bold ${fontSize}px handwriting`;
     ctx.textAlign = "left";
     ctx.textBaseline = "alphabetic";
 
@@ -817,13 +817,13 @@ function drawWinScreen(
     ctx.translate(width / 2, y);
     ctx.scale(scale, scale);
 
-    ctx.font = `${statFontSize}px sans-serif`;
+    ctx.font = `${statFontSize}px handwriting`;
     ctx.textAlign = "right";
     ctx.textBaseline = "middle";
     ctx.fillStyle = "#d8d8d8";
     ctx.fillText(stat.label, -statFontSize * 0.3, 0);
 
-    ctx.font = `bold ${statFontSize}px sans-serif`;
+    ctx.font = `bold ${statFontSize}px handwriting`;
     ctx.textAlign = "left";
 
     const shadowOff = statFontSize * 0.05;
@@ -837,10 +837,10 @@ function drawWinScreen(
   }
 
   if (t > WIN_SCREEN_INPUT_DELAY) {
-    const promptAlpha = 0.5 + Math.sin(t * 5) * 0.5;
+    const promptAlpha = 0.5 + Math.sin(t * 2.5) * 0.25;
     ctx.globalAlpha = promptAlpha;
     ctx.fillStyle = "white";
-    ctx.font = `${fontSize * 0.3}px sans-serif`;
+    ctx.font = `${statFontSize}px handwriting`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText("Press any key to continue", width / 2, height * 0.82);
