@@ -29,6 +29,14 @@ import {
 } from "./sprite";
 import { state } from "./state";
 import * as Renderer from "./renderer";
+import playerSprite from "./assets/images/player-sprite.png";
+import playerFrames from "./assets/images/player-sprite.frames.json";
+
+const titlePlayerImage = new Image();
+titlePlayerImage.src = playerSprite;
+const titlePlayerIdleFrames = playerFrames.filter(
+  (f) => f.size === "small" && f.eat === undefined && !f.squish,
+);
 
 const DEBUG = true;
 const SHADOWS_ENABLED = true; // @seb in case you don't like these
@@ -43,6 +51,28 @@ const BURGER_TILE_SIZE = 70; // px on screen
 function startTransition(level: number) {
   state.transitionTime = -TRANSITION_COVER_TIME;
   state.transitionLevel = level;
+}
+
+function updateControlsTutorial(state: State, dt: number) {
+  for (const key of state.tutorialKeys) {
+    if (!key.popped) {
+      const wasPressed = state.justPressed.some((k) => key.keys.includes(k));
+      if (wasPressed) {
+        key.popped = true;
+        key.popTime = state.elapsedSeconds;
+      }
+    }
+
+    if (key.popped) {
+      key.popScale = expDecay(key.popScale, 0, 16, dt);
+    }
+  }
+
+  // all popped and fully scaled down? go to title
+  if (state.tutorialKeys.every((k) => k.popped && k.popScale < 0.01)) {
+    state.gamePhase = "title";
+    state.titleTime = 0;
+  }
 }
 
 function wrapLevel(index: number) {
@@ -105,6 +135,25 @@ function prepLevel(index: number) {
 }
 
 export function update(state: State, dt: number) {
+  state.elapsedSeconds += dt / 1000;
+
+  // --- Controls tutorial phase ---
+  if (state.gamePhase === "controls") {
+    updateControlsTutorial(state, dt);
+    return;
+  }
+
+  // --- Title screen phase ---
+  if (state.gamePhase === "title") {
+    state.titleTime += dt / 1000;
+    if (state.titleTime > 0.5 && state.justPressed.length > 0) {
+      state.gamePhase = "gameplay";
+      startTransition(0);
+    }
+    return;
+  }
+
+  // --- Gameplay phase ---
   // advance transition
   if (state.transitionTime !== null) {
     const prev = state.transitionTime;
@@ -141,7 +190,6 @@ export function update(state: State, dt: number) {
       state.transitionLevel = null;
     }
 
-    state.elapsedSeconds += dt / 1000;
     return;
   }
 
@@ -160,7 +208,6 @@ export function update(state: State, dt: number) {
         return;
       }
     }
-    state.elapsedSeconds += dt / 1000;
     return;
   }
 
@@ -556,13 +603,21 @@ export function update(state: State, dt: number) {
   }
 
   state.levelTime += dt / 1000;
-  state.elapsedSeconds += dt / 1000;
 }
 
-prepLevel(0);
+// Only prep level 0 if starting in gameplay (not intro)
+if (state.gamePhase === "gameplay") {
+  prepLevel(0);
+}
 
 export function draw(state: State, ctx: CanvasRenderingContext2D) {
   const { width, height } = ctx.canvas.getBoundingClientRect();
+
+  // --- Draw intro phases ---
+  if (state.gamePhase === "controls" || state.gamePhase === "title") {
+    drawIntro(state, ctx, width, height);
+    return;
+  }
 
   const skyGradient = ctx.createLinearGradient(0, 0, 0, height);
   skyGradient.addColorStop(0, "#3a7bb8");
@@ -911,5 +966,192 @@ function drawWinScreen(
     ctx.textBaseline = "middle";
     ctx.fillText("Press any key to continue", width / 2, height * 0.82);
     ctx.globalAlpha = 1;
+  }
+}
+
+// ==================== INTRO SCREENS ====================
+
+function drawIntro(
+  state: State,
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+) {
+  // sky background
+  const skyGradient = ctx.createLinearGradient(0, 0, 0, height);
+  skyGradient.addColorStop(0, "#3a7bb8");
+  skyGradient.addColorStop(1, "#6aaccc");
+  ctx.fillStyle = skyGradient;
+  ctx.fillRect(0, 0, width, height);
+
+  if (state.gamePhase === "controls") {
+    drawControlsTutorial(state, ctx, width, height);
+  } else {
+    drawTitleScreen(state, ctx, width, height);
+  }
+}
+
+function drawControlsTutorial(
+  state: State,
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+) {
+  const minSide = Math.min(width, height);
+  const keySize = minSide * 0.11;
+  const spacing = keySize * 1.4;
+  const cx = width / 2;
+  const cy = height * 0.4; // arrow cluster sits a bit above center
+
+  const t = state.elapsedSeconds;
+
+  for (const key of state.tutorialKeys) {
+    // fully gone
+    if (key.popped && key.popScale < 0.01) continue;
+
+    let scale: number;
+    if (key.popped) {
+      scale = key.popScale;
+    } else {
+      // gentle scale pulse
+      scale = 1 + Math.sin(t * 1.5 + key.bobPhase) * 0.03;
+    }
+
+    // origin position + gentle oscillation around it
+    const bobX = Math.sin(t * key.bobSpeedX + key.bobPhase) * key.bobRadiusX;
+    const bobY = Math.cos(t * key.bobSpeedY + key.bobPhase * 1.3) * key.bobRadiusY;
+    const screenX = cx + key.originX * spacing + bobX;
+    const screenY = cy + key.originY * spacing + bobY;
+
+    // gentle tilt oscillation
+    const tilt = key.popped ? 0 : Math.sin(t * 0.8 + key.bobPhase) * 0.04;
+
+    ctx.save();
+    ctx.translate(screenX, screenY);
+    ctx.rotate(tilt);
+    ctx.scale(scale, scale);
+
+    // key background - rounded rect
+    const ks = keySize;
+    const r = ks * 0.2;
+    ctx.beginPath();
+    ctx.roundRect(-ks / 2, -ks / 2, ks, ks, r);
+
+    ctx.fillStyle = "rgba(255, 255, 255, 0.15)";
+    ctx.fill();
+
+    ctx.strokeStyle = "rgba(255,255,255,0.6)";
+    ctx.lineWidth = ks * 0.04;
+    ctx.stroke();
+
+    // label
+    ctx.font = `bold ${ks * 0.5}px handwriting`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "white";
+    ctx.fillText(key.label, 0, 0);
+
+    ctx.restore();
+  }
+
+}
+
+function drawTitleScreen(
+  state: State,
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+) {
+  const minSide = Math.min(width, height);
+  const t = state.titleTime;
+  const cx = width / 2;
+
+  // Player character in center - animate entrance
+  const playerEntranceT = clamp(0, t * 3, 1);
+  const playerScale = playerEntranceT * (2 - playerEntranceT); // ease out
+  const playerSize = minSide * 0.3;
+
+  if (titlePlayerImage.complete && titlePlayerIdleFrames.length > 0) {
+    const frame =
+      titlePlayerIdleFrames[
+        Math.floor(state.elapsedSeconds * 2) % titlePlayerIdleFrames.length
+      ]!;
+    ctx.save();
+    ctx.translate(cx, height * 0.42);
+    ctx.scale(playerScale, playerScale);
+    // wobble
+    const wobble = Math.sin(state.elapsedSeconds * 2) * 0.05;
+    ctx.rotate(wobble);
+    ctx.drawImage(
+      titlePlayerImage,
+      frame.x,
+      frame.y,
+      frame.w,
+      frame.h,
+      -playerSize / 2,
+      -playerSize / 2,
+      playerSize,
+      playerSize,
+    );
+    ctx.restore();
+  }
+
+  // Title text - placeholder
+  const titleDelay = 0.2;
+  const titleT = clamp(0, (t - titleDelay) * 3, 1);
+  if (titleT > 0) {
+    const titleFontSize = minSide * 0.09;
+    const titleScale = titleT * (2 - titleT);
+
+    const titleText = "BURGER BOY";
+    const letters = titleText.split("");
+    const letterSpacing = titleFontSize * 0.65;
+    const totalWidth = letters.length * letterSpacing;
+    const startX = cx - totalWidth / 2 + letterSpacing / 2;
+    const titleY = height * 0.15;
+
+    for (let i = 0; i < letters.length; i++) {
+      const letter = letters[i]!;
+      const letterDelay = i * 0.03;
+      const letterT = clamp(0, (titleT - letterDelay) * 3, 1);
+      const scale = letterT * (2 - letterT);
+      const waveY =
+        Math.sin(state.elapsedSeconds * 3 - i * 0.5) * titleFontSize * 0.08;
+      const waveRot = Math.sin(state.elapsedSeconds * 3 - i * 0.5) * 0.06;
+      const hue = (state.elapsedSeconds * 60 + i * 30) % 360;
+
+      ctx.save();
+      ctx.translate(startX + i * letterSpacing, titleY + waveY);
+      ctx.rotate(waveRot);
+      ctx.scale(scale, scale);
+
+      ctx.font = `bold ${titleFontSize}px handwriting`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+
+      // shadow
+      const shadowOffset = titleFontSize * 0.06;
+      ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+      ctx.fillText(letter, shadowOffset, shadowOffset);
+
+      // colorful letter
+      ctx.fillStyle = `hsl(${hue}, 100%, 60%)`;
+      ctx.fillText(letter, 0, 0);
+
+      ctx.restore();
+    }
+  }
+
+  // "Press any key to go to town"
+  if (t > 0.5) {
+    const promptAlpha = 0.5 + Math.sin(state.elapsedSeconds * 2.5) * 0.3;
+    ctx.save();
+    ctx.globalAlpha = clamp(0, promptAlpha, 1);
+    ctx.font = `${minSide * 0.04}px handwriting`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "white";
+    ctx.fillText("Press any key to go to town", cx, height * 0.75);
+    ctx.restore();
   }
 }
