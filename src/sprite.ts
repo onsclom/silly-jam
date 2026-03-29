@@ -1,4 +1,5 @@
 import sprite from "./assets/images/sprite.png";
+import playerFrames from "./assets/images/player-sprite.frames.json";
 import { state } from "./state";
 
 type SpriteSheet = {
@@ -100,7 +101,44 @@ export function drawCrumbs(
   drawSprite(ctx, index, x - 0.5, y - 0.5, 1 / sheet.frameWidthPx);
 }
 
-// todo: figure out eating frames / timing
+const frames = {
+  small: {
+    idle: playerFrames.filter(
+      (f) => f.size === "small" && f.eat === undefined && !f.squish,
+    ),
+    eat: playerFrames.filter((f) => f.size === "small" && f.eat !== undefined),
+    hit: playerFrames.filter((f) => f.size === "small" && f.squish),
+  },
+  medium: {
+    idle: playerFrames.filter(
+      (f) => f.size === "medium" && f.eat === undefined && !f.squish,
+    ),
+    eat: playerFrames.filter((f) => f.size === "medium" && f.eat !== undefined),
+    hit: playerFrames.filter((f) => f.size === "medium" && f.squish),
+  },
+  large: {
+    idle: playerFrames.filter(
+      (f) => f.size === "large" && f.eat === undefined && !f.squish,
+    ),
+    eat: playerFrames.filter((f) => f.size === "large" && f.eat !== undefined),
+    hit: playerFrames.filter((f) => f.size === "large" && f.squish),
+  },
+  xl: {
+    idle: playerFrames.filter(
+      (f) => f.size === "xl" && f.eat === undefined && !f.squish,
+    ),
+    eat: playerFrames.filter((f) => f.size === "xl" && f.eat !== undefined),
+    hit: playerFrames.filter((f) => f.size === "xl" && f.squish),
+  },
+  xxl: {
+    idle: playerFrames.filter(
+      (f) => f.size === "xxl" && f.eat === undefined && !f.squish,
+    ),
+    eat: playerFrames.filter((f) => f.size === "xxl" && f.eat !== undefined),
+    hit: playerFrames.filter((f) => f.size === "xxl" && f.squish),
+  },
+};
+
 export function drawPlayer(
   ctx: CanvasRenderingContext2D,
   x: number,
