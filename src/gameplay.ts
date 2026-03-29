@@ -381,11 +381,11 @@ export function draw(state: State, ctx: CanvasRenderingContext2D) {
 
   // Blue sky gradient background
   const { width, height } = ctx.canvas.getBoundingClientRect();
-  const skyGradient = ctx.createLinearGradient(0, 0, 0, ctx.canvas.height);
+  const skyGradient = ctx.createLinearGradient(0, 0, 0, height);
   skyGradient.addColorStop(0, "#3a7bb8");
   skyGradient.addColorStop(1, "#6aaccc");
   ctx.fillStyle = skyGradient;
-  ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  ctx.fillRect(0, 0, width, height);
 
   ctx.strokeStyle = "white";
   ctx.lineWidth = 0.02;
