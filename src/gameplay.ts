@@ -433,12 +433,12 @@ export function draw(state: State, ctx: CanvasRenderingContext2D) {
     for (const entity of zAxisSortedEntities) {
       switch (entity.type) {
         case "player": {
-          ctx.strokeRect(
-            entity.x - entity.animatedW / 2,
-            entity.y - entity.animatedH / 2,
-            entity.animatedW,
-            entity.animatedH,
-          );
+          // ctx.strokeRect(
+          //   entity.x - entity.animatedW / 2,
+          //   entity.y - entity.animatedH / 2,
+          //   entity.animatedW,
+          //   entity.animatedH,
+          // );
           // todo:
           // - facing left or right
           // - squished effect
@@ -464,6 +464,9 @@ export function draw(state: State, ctx: CanvasRenderingContext2D) {
         case "toilet":
         case "poop": {
           const isStinky = entity.type === "poop";
+          ctx.save();
+          // TODO: instead of globalAlpha, have the lid up and maybe yellow caution tape on it
+          if (isStinky) ctx.globalAlpha = 0.4;
           if (entity.flipX) {
             ctx.save();
             ctx.translate(entity.x, entity.y);
@@ -473,6 +476,7 @@ export function draw(state: State, ctx: CanvasRenderingContext2D) {
           } else {
             drawToilet(ctx, entity.x, entity.y, isStinky);
           }
+          ctx.restore();
           break;
         }
         case "plate": {
