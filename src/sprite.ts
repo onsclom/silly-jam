@@ -556,8 +556,128 @@ export function drawPlayer(
   ctx.restore();
 }
 
-// todo probably pre-bake these multi-tile subtile things
-// or at least just compute once per level instead of every draw
+// --- Baked static layer (floors + walls rendered once per level) ---
+
+const BAKE_PX_PER_UNIT = 64;
+
+let bakedFloor: HTMLCanvasElement | null = null;
+let bakedWall: HTMLCanvasElement | null = null;
+let bakedWallShadow: HTMLCanvasElement | null = null;
+let bakedOriginX = 0;
+let bakedOriginY = 0;
+let pendingBakeArgs: { entities: Entity[]; shadowOffset: number } | null = null;
+
+// Re-bake when sprite sheet loads (in case prepLevel ran before images were ready)
+sheet.image.addEventListener("load", () => {
+  if (pendingBakeArgs) bakeStaticLayer(pendingBakeArgs.entities, pendingBakeArgs.shadowOffset);
+});
+
+export function bakeStaticLayer(
+  entities: Entity[],
+  shadowOffset: number,
+) {
+  pendingBakeArgs = { entities, shadowOffset };
+
+  const floors = new Set<string>();
+  const wallGlass = new Set<string>();
+
+  for (const e of entities) {
+    if (e.type === "wall" || e.type === "glass") wallGlass.add(`${e.x},${e.y}`);
+    if (e.type === "floor") floors.add(`${e.x},${e.y}`);
+  }
+
+  const staticEnts = entities.filter((e) => e.type === "floor" || e.type === "wall");
+  if (staticEnts.length === 0) {
+    bakedFloor = null;
+    bakedWall = null;
+    bakedWallShadow = null;
+    return;
+  }
+
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (const e of staticEnts) {
+    minX = Math.min(minX, e.x - 0.5);
+    maxX = Math.max(maxX, e.x + 0.5);
+    minY = Math.min(minY, e.y - 0.5);
+    maxY = Math.max(maxY, e.y + 0.5);
+  }
+  const pad = shadowOffset + 0.1;
+  bakedOriginX = minX;
+  bakedOriginY = minY;
+  const w = maxX - minX + pad;
+  const h = maxY - minY + pad;
+  const pxW = Math.ceil(w * BAKE_PX_PER_UNIT);
+  const pxH = Math.ceil(h * BAKE_PX_PER_UNIT);
+
+  function makeCanvas() {
+    const c = document.createElement("canvas");
+    c.width = pxW;
+    c.height = pxH;
+    const ctx = c.getContext("2d")!;
+    ctx.scale(BAKE_PX_PER_UNIT, BAKE_PX_PER_UNIT);
+    ctx.translate(-bakedOriginX, -bakedOriginY);
+    return { canvas: c, ctx };
+  }
+
+  const floorLayer = makeCanvas();
+  const wallLayer = makeCanvas();
+  const wallShadowLayer = makeCanvas();
+  wallShadowLayer.ctx.translate(shadowOffset, shadowOffset);
+
+  // Bake floors
+  for (const e of entities) {
+    if (e.type !== "floor") continue;
+    const isUnderWall = wallGlass.has(`${e.x},${e.y}`);
+    if (isUnderWall) {
+      let floorMask = 0;
+      if (floors.has(`${e.x},${e.y - 1}`) && !wallGlass.has(`${e.x},${e.y - 1}`)) floorMask |= 1;
+      if (floors.has(`${e.x + 1},${e.y}`) && !wallGlass.has(`${e.x + 1},${e.y}`)) floorMask |= 2;
+      if (floors.has(`${e.x},${e.y + 1}`) && !wallGlass.has(`${e.x},${e.y + 1}`)) floorMask |= 4;
+      if (floors.has(`${e.x - 1},${e.y}`) && !wallGlass.has(`${e.x - 1},${e.y}`)) floorMask |= 8;
+      if (floorMask === 0) continue;
+      drawFloor(floorLayer.ctx, e, floorMask);
+    } else {
+      drawFloor(floorLayer.ctx, e);
+    }
+  }
+
+  // Bake walls (separate canvas so they render at their own z-level)
+  for (const e of entities) {
+    if (e.type !== "wall") continue;
+    const { x, y, index: i } = e;
+    let mask = 0;
+    if (wallGlass.has(`${x},${y - 1}`)) mask |= 1;
+    if (wallGlass.has(`${x + 1},${y}`)) mask |= 2;
+    if (wallGlass.has(`${x},${y + 1}`)) mask |= 4;
+    if (wallGlass.has(`${x - 1},${y}`)) mask |= 8;
+    drawWall(wallShadowLayer.ctx, x, y, i, true, mask);
+    drawWall(wallLayer.ctx, x, y, i, false, mask);
+  }
+
+  bakedFloor = floorLayer.canvas;
+  bakedWall = wallLayer.canvas;
+  bakedWallShadow = wallShadowLayer.canvas;
+}
+
+function drawBakedCanvas(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement | null) {
+  if (!canvas) return;
+  const w = canvas.width / BAKE_PX_PER_UNIT;
+  const h = canvas.height / BAKE_PX_PER_UNIT;
+  ctx.drawImage(canvas, bakedOriginX, bakedOriginY, w, h);
+}
+
+export function drawBakedFloorLayer(ctx: CanvasRenderingContext2D) {
+  drawBakedCanvas(ctx, bakedFloor);
+}
+
+export function drawBakedWallLayer(ctx: CanvasRenderingContext2D) {
+  drawBakedCanvas(ctx, bakedWall);
+}
+
+export function drawBakedWallShadowLayer(ctx: CanvasRenderingContext2D) {
+  drawBakedCanvas(ctx, bakedWallShadow);
+}
+
 /**
  * @param floorMask - If > 0, this is a wall-floor: only draw nine-patch sections
  *   facing non-wall neighbors. Bitmask: top=1, right=2, bottom=4, left=8.

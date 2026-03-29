@@ -19,16 +19,18 @@ import { parseLevel } from "./parser";
 import { levels } from "./levels/levels";
 import {
   drawArtwork,
+  bakeStaticLayer,
+  drawBakedFloorLayer,
+  drawBakedWallLayer,
+  drawBakedWallShadowLayer,
   burgerBoySheet,
   drawBurger,
   drawBurgerBoyFrame,
   drawCrumbs,
-  drawFloor,
   drawGlass,
   drawPlayer,
   drawSheetCellCentered,
   drawToilet,
-  drawWall,
   sheet,
   tutorialArrowSpriteByKey,
 } from "./sprite";
@@ -37,6 +39,7 @@ import * as Renderer from "./renderer";
 
 const DEBUG = true;
 const SHADOWS_ENABLED = true; // @seb in case you don't like these
+const SHADOW_OFFSET = 0.12;
 const MAX_UNDO_STACK = 128;
 const WIN_SCREEN_INPUT_DELAY = 0.5; // prevents accidently startiong next level too soon
 
@@ -183,6 +186,8 @@ function prepLevel(index: number) {
       });
     }
   }
+
+  bakeStaticLayer(state.entities, SHADOW_OFFSET);
 
   return parsed;
 }
@@ -339,23 +344,23 @@ export function update(state: State, dt: number) {
           state.pendingUndoSnapshot = structuredClone(state.entities);
           player.vx = move.vx;
           player.vy = move.vy;
-        const targetX = Math.round(player.x) + move.vx;
-        const targetY = Math.round(player.y) + move.vy;
-        // From rest, pressing into a glass tile ahead: no crack/shatter on that tile this move.
-        const adjacentGlassAhead = glasses.find(
-          (glass) =>
-            glass.glassState !== 2 &&
-            Math.round(glass.x) === targetX &&
-            Math.round(glass.y) === targetY,
-        );
-        player.moveStartedAgainstCrackedGlassIndex = adjacentGlassAhead
-          ? adjacentGlassAhead.index
-          : -1;
-        if (move.flipX !== undefined) player.flipX = move.flipX;
-        state.moves++;
+          const targetX = Math.round(player.x) + move.vx;
+          const targetY = Math.round(player.y) + move.vy;
+          // From rest, pressing into a glass tile ahead: no crack/shatter on that tile this move.
+          const adjacentGlassAhead = glasses.find(
+            (glass) =>
+              glass.glassState !== 2 &&
+              Math.round(glass.x) === targetX &&
+              Math.round(glass.y) === targetY,
+          );
+          player.moveStartedAgainstCrackedGlassIndex = adjacentGlassAhead
+            ? adjacentGlassAhead.index
+            : -1;
+          if (move.flipX !== undefined) player.flipX = move.flipX;
+          state.moves++;
+        }
       }
     }
-  }
   }
 
   for (const entity of state.entities) {
@@ -783,23 +788,17 @@ export function draw(state: State, ctx: CanvasRenderingContext2D) {
     ctx.textBaseline = "middle";
     ctx.font = "1px handwriting";
 
-    const SHADOW_OFFSET = 0.12;
     const SHADOW_Z = -0.5; // between everything and floor
 
-    // Build set of wall/glass neighbor positions for auto-tiling
-    const wallNeighborSet = new Set<string>();
-    const floorSet = new Set<string>();
-    for (const e of state.entities) {
-      if (e.type === "wall" || e.type === "glass") {
-        wallNeighborSet.add(`${e.x},${e.y}`);
-      }
-      if (e.type === "floor") {
-        floorSet.add(`${e.x},${e.y}`);
-      }
+    // Draw baked static layers at correct z-levels
+    Renderer.submit(-1, (ctx) => drawBakedFloorLayer(ctx));
+    Renderer.submit(0, (ctx) => drawBakedWallLayer(ctx));
+    if (SHADOWS_ENABLED) {
+      Renderer.submit(SHADOW_Z, (ctx) => drawBakedWallShadowLayer(ctx));
     }
 
     for (const entity of state.entities) {
-      if (entity.type === "none") continue;
+      if (entity.type === "none" || entity.type === "floor" || entity.type === "wall") continue;
 
       // helper to submit a shadow version of a draw call
       const submitShadow = !SHADOWS_ENABLED
@@ -820,37 +819,11 @@ export function draw(state: State, ctx: CanvasRenderingContext2D) {
           Renderer.submit(entity.z, (ctx) => drawPlayer(ctx, e));
           break;
         }
-        case "floor": {
-          const e = entity;
-          if (wallNeighborSet.has(`${e.x},${e.y}`)) {
-            // Compute which sides have actual floor tiles: top=1, right=2, bottom=4, left=8
-            let floorMask = 0;
-            if (floorSet.has(`${e.x},${e.y - 1}`) && !wallNeighborSet.has(`${e.x},${e.y - 1}`)) floorMask |= 1;
-            if (floorSet.has(`${e.x + 1},${e.y}`) && !wallNeighborSet.has(`${e.x + 1},${e.y}`)) floorMask |= 2;
-            if (floorSet.has(`${e.x},${e.y + 1}`) && !wallNeighborSet.has(`${e.x},${e.y + 1}`)) floorMask |= 4;
-            if (floorSet.has(`${e.x - 1},${e.y}`) && !wallNeighborSet.has(`${e.x - 1},${e.y}`)) floorMask |= 8;
-            if (floorMask === 0) break; // no adjacent non-wall floors, skip
-            Renderer.submit(entity.z, (ctx) => drawFloor(ctx, e, floorMask));
-          } else {
-            Renderer.submit(entity.z, (ctx) => drawFloor(ctx, e));
-          }
-          break;
-        }
-        case "wall": {
-          const { x, y, index: i, z } = entity;
-          // Compute neighbor bitmask for auto-tiling: top=1, right=2, bottom=4, left=8
-          let mask = 0;
-          if (wallNeighborSet.has(`${x},${y - 1}`)) mask |= 1;
-          if (wallNeighborSet.has(`${x + 1},${y}`)) mask |= 2;
-          if (wallNeighborSet.has(`${x},${y + 1}`)) mask |= 4;
-          if (wallNeighborSet.has(`${x - 1},${y}`)) mask |= 8;
-          submitShadow((ctx) => drawWall(ctx, x, y, i, true, mask));
-          Renderer.submit(z, (ctx) => drawWall(ctx, x, y, i, false, mask));
-          break;
-        }
         case "artwork": {
           const { x, y, z, artworkSpriteIndex } = entity;
-          Renderer.submit(z, (ctx) => drawArtwork(ctx, x, y, artworkSpriteIndex));
+          Renderer.submit(z, (ctx) =>
+            drawArtwork(ctx, x, y, artworkSpriteIndex),
+          );
           break;
         }
         case "burger": {
