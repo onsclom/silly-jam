@@ -13,6 +13,7 @@ import { levels } from "./levels/levels";
 import {
   drawBurger,
   drawCrumbs,
+  drawFloor,
   drawPlayer,
   drawToilet,
   drawWall,
@@ -492,9 +493,7 @@ export function draw(state: State, ctx: CanvasRenderingContext2D) {
           break;
         }
         case "floor": {
-          ctx.fillStyle =
-            (entity.x + entity.y) % 2 === 0 ? "#b0b0b0" : "#9a9a9a";
-          ctx.fillRect(entity.x - 0.5, entity.y - 0.5, 1.01, 1.01);
+          drawFloor(ctx, entity);
           break;
         }
         case "wall": {
