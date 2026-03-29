@@ -1,8 +1,13 @@
 import { State, clearAllEntities, createEntity, removeEntity } from "./state";
 import { chompSound, sfx } from "./audio";
-import { justMoved, justPressedRestart, justPressedUndo } from "./inputs";
+import {
+  justMoved,
+  justPressedRestart,
+  justPressedSelect,
+  justPressedUndo,
+} from "./inputs";
 import * as Camera from "./camera";
-import { isColliding, expDecay } from "./util";
+import { isColliding, expDecay, clamp } from "./util";
 import { parseLevel } from "./parser";
 import { levels } from "./levels/levels";
 import {
@@ -16,8 +21,8 @@ import {
 import { state } from "./state";
 
 const DEBUG = true;
-
 const MAX_UNDO_STACK = 128;
+const WIN_SCREEN_INPUT_DELAY = 0.5; // prevents accidently startiong next level too soon
 
 function wrapLevel(index: number) {
   return ((index % levels.length) + levels.length) % levels.length;
@@ -28,6 +33,11 @@ function prepLevel(index: number) {
   clearAllEntities();
   state.undoStack = [];
   state.pendingUndoSnapshot = null;
+  state.levelTime = 0;
+  state.moves = 0;
+  state.undos = 0;
+  state.restarts = 0;
+
   // floodfill floor tiles from player start, bounded by walls
   const walls = new Set<string>();
   let playerStart: { x: number; y: number } | null = null;
@@ -74,6 +84,32 @@ function prepLevel(index: number) {
 }
 
 export function update(state: State, dt: number) {
+  if (state.winScreen) {
+    state.winScreenTime += dt / 1000;
+    if (state.winScreenTime > WIN_SCREEN_INPUT_DELAY) {
+      if (
+        justPressedSelect() ||
+        justMoved.left() ||
+        justMoved.right() ||
+        justMoved.up() ||
+        justMoved.down() ||
+        justPressedRestart()
+      ) {
+        state.winScreen = false;
+        state.winScreenTime = 0;
+        state.level = wrapLevel(state.level + 1);
+        prepLevel(state.level);
+        const textarea = document.querySelector("textarea");
+        if (textarea) {
+          textarea.value = levels[state.level]!;
+        }
+        return;
+      }
+    }
+    state.elapsedSeconds += dt / 1000;
+    return;
+  }
+
   if (DEBUG) {
     if (state.justPressed.includes("q")) {
       state.level = wrapLevel(state.level - 1);
@@ -89,6 +125,7 @@ export function update(state: State, dt: number) {
 
   if (justPressedRestart()) {
     prepLevel(state.level);
+    state.restarts++;
     return;
   }
 
@@ -99,6 +136,7 @@ export function update(state: State, dt: number) {
         Object.assign(state.entities[i]!, snapshot[i]!);
       }
       state.undoTextOpacity = 1;
+      state.undos++;
       return;
     }
   }
@@ -112,23 +150,22 @@ export function update(state: State, dt: number) {
     (p) => p.vx === 0 && p.vy === 0,
   );
 
-  // handle movement inputs
   for (const player of players) {
     if (isEveryPlayerDoneMoving) {
-      if (justMoved.left()) {
+      const moves = [
+        { check: justMoved.left, vx: -1, vy: 0, flipX: true },
+        { check: justMoved.right, vx: 1, vy: 0, flipX: false },
+        { check: justMoved.up, vx: 0, vy: -1 },
+        { check: justMoved.down, vx: 0, vy: 1 },
+      ];
+      const move = moves.find((m) => m.check());
+
+      if (move) {
         state.pendingUndoSnapshot = structuredClone(state.entities);
-        player.vx = -1;
-        player.flipX = true;
-      } else if (justMoved.right()) {
-        state.pendingUndoSnapshot = structuredClone(state.entities);
-        player.vx = 1;
-        player.flipX = false;
-      } else if (justMoved.up()) {
-        state.pendingUndoSnapshot = structuredClone(state.entities);
-        player.vy = -1;
-      } else if (justMoved.down()) {
-        state.pendingUndoSnapshot = structuredClone(state.entities);
-        player.vy = 1;
+        player.vx = move.vx;
+        player.vy = move.vy;
+        if (move.flipX !== undefined) player.flipX = move.flipX;
+        state.moves++;
       }
     }
   }
@@ -198,7 +235,6 @@ export function update(state: State, dt: number) {
           } else if (minOverlapY < minOverlapX) {
             resolveY();
           } else {
-            // tie: resolve based on velocity
             if (entity.vx !== 0) {
               resolveX();
             } else {
@@ -210,7 +246,7 @@ export function update(state: State, dt: number) {
       }
       if (hitWall) {
         sfx("hitWall").play({ detune: Math.random() * 1000 - 500 });
-        const shakeStrength = 0.15 * entity.w; // @austin--this might need tuning now! I made it proportional to player size
+        const shakeStrength = 0.15 * entity.w ** 1.5;
         state.shakeX = -lastVx * shakeStrength;
         state.shakeY = -lastVy * shakeStrength;
 
@@ -382,17 +418,15 @@ export function update(state: State, dt: number) {
     );
   }
 
+  state.levelTime += dt / 1000;
   state.elapsedSeconds += dt / 1000;
 }
 
 prepLevel(0);
 
 export function draw(state: State, ctx: CanvasRenderingContext2D) {
-  // const { width, height } = ctx.canvas.getBoundingClientRect();
-  // const center = { x: width / 2, y: height / 2 };
-
-  // Blue sky gradient background
   const { width, height } = ctx.canvas.getBoundingClientRect();
+
   const skyGradient = ctx.createLinearGradient(0, 0, 0, height);
   skyGradient.addColorStop(0, "#3a7bb8");
   skyGradient.addColorStop(1, "#6aaccc");
@@ -418,10 +452,6 @@ export function draw(state: State, ctx: CanvasRenderingContext2D) {
   );
 
   Camera.drawWithCamera(ctx, state.camera, (ctx) => {
-    // lets draw a rect around the game area
-    // ctx.strokeStyle = "red";
-    // ctx.strokeRect(-0.5, -0.5, gameArea.width, gameArea.height);
-
     ctx.strokeStyle = "white";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
@@ -463,7 +493,6 @@ export function draw(state: State, ctx: CanvasRenderingContext2D) {
         case "poop": {
           const isStinky = entity.type === "poop";
           ctx.save();
-          // TODO: instead of globalAlpha, have the lid up and maybe yellow caution tape on it
           if (isStinky) ctx.globalAlpha = 0.4;
           if (entity.flipX) {
             ctx.save();
@@ -485,14 +514,171 @@ export function draw(state: State, ctx: CanvasRenderingContext2D) {
     }
   });
 
+  // Level counter top-right
+  {
+    const padding = 16;
+    const levelFontSize = Math.min(width, height) * 0.035;
+    ctx.save();
+    ctx.font = `bold ${levelFontSize}px sans-serif`;
+    ctx.textAlign = "right";
+    ctx.textBaseline = "top";
+    ctx.fillStyle = "rgba(0, 0, 0, 0)";
+    ctx.fillText(
+      `${state.level + 1} / ${levels.length}`,
+      width - padding + 1,
+      padding + 1,
+    );
+    ctx.fillStyle = "white";
+    ctx.fillText(
+      `${state.level + 1} / ${levels.length}`,
+      width - padding,
+      padding,
+    );
+    ctx.restore();
+  }
+
   if (state.undoTextOpacity > 0.01) {
-    const { width, height } = ctx.canvas.getBoundingClientRect();
     ctx.globalAlpha = state.undoTextOpacity;
     ctx.fillStyle = "white";
     ctx.font = "bold 48px sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText("UNDO", width / 2, height / 2);
+    ctx.globalAlpha = 1;
+  }
+
+  if (state.winScreen) {
+    drawWinScreen(state, ctx, width, height);
+  }
+}
+
+function formatTime(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  const ms = Math.floor((seconds % 1) * 10);
+  return m > 0 ? `${m}:${s.toString().padStart(2, "0")}.${ms}` : `${s}.${ms}s`;
+}
+
+function drawWinScreen(
+  state: State,
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+) {
+  const t = state.winScreenTime;
+  const minSide = Math.min(width, height);
+  const fontSize = minSide * 0.075;
+
+  const overlayAlpha = Math.min(t * 3, 0.6);
+  ctx.fillStyle = `rgba(0, 0, 0, ${overlayAlpha})`;
+  ctx.fillRect(0, 0, width, height);
+
+  const letters = "LEVEL COMPLETED!".split("");
+  const letterSpacing = fontSize * 0.7;
+  const totalWidth = letters.length * letterSpacing;
+  const startX = width / 2 - totalWidth / 2 + letterSpacing / 2;
+  const titleY = height * 0.3;
+
+  for (let i = 0; i < letters.length; i++) {
+    const letter = letters[i]!;
+    const wavePhase = t * 4 - i * 0.4;
+    const waveY = Math.sin(wavePhase) * fontSize * 0.15;
+    const waveRotation = Math.sin(wavePhase) * 0.15;
+    const hue = (t * 120 + i * 36) % 360;
+
+    const letterDelay = i * 0.05;
+    const scaleT = clamp(0, (t - letterDelay) * 4, 1);
+    const scale =
+      scaleT < 1 ? scaleT * (1 + Math.sin(scaleT * Math.PI) * 0.3) : 1;
+
+    const x = startX + i * letterSpacing;
+    const y = titleY + waveY;
+
+    ctx.save();
+    ctx.font = `bold ${fontSize}px sans-serif`;
+    ctx.textAlign = "left";
+    ctx.textBaseline = "alphabetic";
+
+    const metrics = ctx.measureText(letter);
+    const glyphW = metrics.width;
+    const glyphH =
+      metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent;
+    const centerOffsetX = glyphW / 2;
+    const centerOffsetY = metrics.actualBoundingBoxAscent - glyphH / 2;
+
+    ctx.translate(x, y);
+    ctx.rotate(waveRotation);
+    ctx.scale(scale, scale);
+
+    const shadowOffset = fontSize * 0.06;
+    ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+    ctx.fillText(
+      letter,
+      -centerOffsetX + shadowOffset,
+      centerOffsetY + shadowOffset,
+    );
+
+    ctx.fillStyle = `hsl(${hue}, 100%, 60%)`;
+    ctx.fillText(letter, -centerOffsetX, centerOffsetY);
+
+    ctx.restore();
+  }
+
+  const stats = [
+    { label: "Time", value: formatTime(state.winStats.time) },
+    { label: "Moves", value: `${state.winStats.moves}` },
+    { label: "Undos", value: `${state.winStats.undos}` },
+    { label: "Restarts", value: `${state.winStats.restarts}` },
+  ];
+
+  const statFontSize = fontSize * 0.45;
+  const statLineHeight = statFontSize * 2;
+  const statsStartY = height * 0.45;
+  const statsDelay = 0.3;
+
+  for (let i = 0; i < stats.length; i++) {
+    const stat = stats[i]!;
+    const statT = Math.max(0, t - statsDelay - i * 0.1);
+    if (statT <= 0) continue;
+
+    const scaleT = Math.min(1, statT * 4);
+    const scale =
+      scaleT < 1 ? scaleT * (1 + Math.sin(scaleT * Math.PI) * 0.3) : 1;
+    const y = statsStartY + i * statLineHeight;
+    const rowText = `${stat.label}  ${stat.value}`;
+    const valueHue = (t * 80 + i * 60) % 360;
+
+    ctx.save();
+    ctx.translate(width / 2, y);
+    ctx.scale(scale, scale);
+
+    ctx.font = `${statFontSize}px sans-serif`;
+    ctx.textAlign = "right";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "#d8d8d8";
+    ctx.fillText(stat.label, -statFontSize * 0.3, 0);
+
+    ctx.font = `bold ${statFontSize}px sans-serif`;
+    ctx.textAlign = "left";
+
+    const shadowOff = statFontSize * 0.05;
+    ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+    ctx.fillText(stat.value, statFontSize * 0.3 + shadowOff, shadowOff);
+
+    ctx.fillStyle = "white";
+    ctx.fillText(stat.value, statFontSize * 0.3, 0);
+
+    ctx.restore();
+  }
+
+  if (t > WIN_SCREEN_INPUT_DELAY) {
+    const promptAlpha = 0.5 + Math.sin(t * 5) * 0.5;
+    ctx.globalAlpha = promptAlpha;
+    ctx.fillStyle = "white";
+    ctx.font = `${fontSize * 0.3}px sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("Press any key to continue", width / 2, height * 0.82);
     ctx.globalAlpha = 1;
   }
 }
