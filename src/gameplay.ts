@@ -1,5 +1,12 @@
 import { State, clearAllEntities, createEntity, removeEntity } from "./state";
-import { chompSound, hitWallSound, sfx, winSound } from "./audio";
+import {
+  chompSound,
+  glassHitSound,
+  glassShatterSound,
+  hitWallSound,
+  sfx,
+  winSound,
+} from "./audio";
 import {
   justMoved,
   justPressedRestart,
@@ -190,12 +197,23 @@ export function update(state: State, dt: number) {
 
   const players = state.entities.filter((e) => e.type === "player");
   const walls = state.entities.filter((e) => e.type === "wall");
+  const glasses = state.entities.filter((e) => e.type === "glass");
   const burgers = state.entities.filter((e) => e.type === "burger");
   const toilets = state.entities.filter((e) => e.type === "toilet");
+  const getBlockingObstacles = () =>
+    state.entities.filter(
+      (e) => e.type === "wall" || (e.type === "glass" && e.glassState !== 2),
+    );
 
   const isEveryPlayerDoneMoving = players.every(
     (p) => p.vx === 0 && p.vy === 0,
   );
+
+  for (const player of players) {
+    if (player.vx === 0 && player.vy === 0) {
+      player.moveStartedAgainstCrackedGlassIndex = -1;
+    }
+  }
 
   for (const player of players) {
     if (isEveryPlayerDoneMoving) {
@@ -211,6 +229,17 @@ export function update(state: State, dt: number) {
         state.pendingUndoSnapshot = structuredClone(state.entities);
         player.vx = move.vx;
         player.vy = move.vy;
+        const targetX = Math.round(player.x) + move.vx;
+        const targetY = Math.round(player.y) + move.vy;
+        const adjacentCrackedGlass = glasses.find(
+          (glass) =>
+            glass.glassState === 1 &&
+            Math.round(glass.x) === targetX &&
+            Math.round(glass.y) === targetY,
+        );
+        player.moveStartedAgainstCrackedGlassIndex = adjacentCrackedGlass
+          ? adjacentCrackedGlass.index
+          : -1;
         if (move.flipX !== undefined) player.flipX = move.flipX;
         state.moves++;
       }
@@ -225,17 +254,47 @@ export function update(state: State, dt: number) {
     if (entity.type === "player") {
       const lastVx = entity.vx;
       const lastVy = entity.vy;
+
+      // First pass: apply state transitions to all overlapping glass this frame.
+      // This lets bigger players affect multiple glass tiles in one bump.
+      let crackedAnyGlass = false;
+      let shatteredAnyGlass = false;
+      for (const glass of glasses) {
+        if (glass.glassState === 2) continue;
+        if (!isColliding(entity, glass)) continue;
+
+        if (glass.glassState === 0) {
+          glass.glassState = 1;
+          crackedAnyGlass = true;
+          continue;
+        }
+
+        const startedFromRestAdjacentAndPushedIntoThisGlass =
+          entity.moveStartedAgainstCrackedGlassIndex === glass.index;
+        if (!startedFromRestAdjacentAndPushedIntoThisGlass) {
+          glass.glassState = 2;
+          shatteredAnyGlass = true;
+        }
+      }
+      if (crackedAnyGlass) glassHitSound();
+      if (shatteredAnyGlass) {
+        glassShatterSound();
+        entity.moveStartedAgainstCrackedGlassIndex = -1;
+      }
+
+      let hitObstacle = false;
       let hitWall = false;
-      for (const wall of walls) {
-        if (isColliding(entity, wall)) {
+      const blockingObstacles = getBlockingObstacles();
+      for (const obstacle of blockingObstacles) {
+        if (isColliding(entity, obstacle)) {
           const eLeft = entity.x - entity.w / 2;
           const eRight = entity.x + entity.w / 2;
           const eTop = entity.y - entity.h / 2;
           const eBottom = entity.y + entity.h / 2;
-          const wLeft = wall.x - wall.w / 2;
-          const wRight = wall.x + wall.w / 2;
-          const wTop = wall.y - wall.h / 2;
-          const wBottom = wall.y + wall.h / 2;
+          const wLeft = obstacle.x - obstacle.w / 2;
+          const wRight = obstacle.x + obstacle.w / 2;
+          const wTop = obstacle.y - obstacle.h / 2;
+          const wBottom = obstacle.y + obstacle.h / 2;
 
           const overlapLeft = eRight - wLeft;
           const overlapRight = wRight - eLeft;
@@ -244,19 +303,20 @@ export function update(state: State, dt: number) {
 
           const minOverlapX = Math.min(overlapLeft, overlapRight);
           const minOverlapY = Math.min(overlapTop, overlapBottom);
+          let hitThisObstacle = false;
 
           const resolveX = () => {
             if (overlapLeft < overlapRight) {
               entity.x = wLeft - entity.w / 2;
-              if (entity.vx > 0) {
+              if (lastVx > 0) {
                 entity.vx = 0;
-                hitWall = true;
+                hitThisObstacle = true;
               }
             } else {
               entity.x = wRight + entity.w / 2;
-              if (entity.vx < 0) {
+              if (lastVx < 0) {
                 entity.vx = 0;
-                hitWall = true;
+                hitThisObstacle = true;
               }
             }
           };
@@ -264,14 +324,14 @@ export function update(state: State, dt: number) {
           const resolveY = () => {
             if (overlapTop < overlapBottom) {
               entity.y = wTop - entity.h / 2;
-              if (entity.vy > 0) {
-                hitWall = true;
+              if (lastVy > 0) {
+                hitThisObstacle = true;
                 entity.vy = 0;
               }
             } else {
               entity.y = wBottom + entity.h / 2;
-              if (entity.vy < 0) {
-                hitWall = true;
+              if (lastVy < 0) {
+                hitThisObstacle = true;
                 entity.vy = 0;
               }
             }
@@ -282,18 +342,25 @@ export function update(state: State, dt: number) {
           } else if (minOverlapY < minOverlapX) {
             resolveY();
           } else {
-            if (entity.vx !== 0) {
+            if (lastVx !== 0) {
               resolveX();
             } else {
               resolveY();
             }
           }
-          break;
+          if (hitThisObstacle) {
+            hitObstacle = true;
+            if (obstacle.type === "wall") {
+              hitWall = true;
+            }
+          }
         }
       }
-      if (hitWall) {
-        // const sizeScale = entity.w ** 1.5;
-        hitWallSound(entity);
+      if (hitObstacle) {
+        if (hitWall) {
+          // const sizeScale = entity.w ** 1.5;
+          hitWallSound(entity);
+        }
         const shakeStrength = 0.09 * entity.w ** 1.5;
         state.shakeX = -lastVx * shakeStrength;
         state.shakeY = -lastVy * shakeStrength;
@@ -324,6 +391,7 @@ export function update(state: State, dt: number) {
           }
           state.pendingUndoSnapshot = null;
         }
+        entity.moveStartedAgainstCrackedGlassIndex = -1;
       }
 
       const burgerSizeChangeAmount = 0.5;
@@ -394,14 +462,14 @@ export function update(state: State, dt: number) {
         const maxPasses = 4;
         for (let pass = 0; pass < maxPasses; pass++) {
           let hadCollision = false;
-          for (const wall of walls) {
-            if (!isColliding(entity, wall)) continue;
+          for (const obstacle of getBlockingObstacles()) {
+            if (!isColliding(entity, obstacle)) continue;
             hadCollision = true;
 
-            const wLeft = wall.x - wall.w / 2;
-            const wRight = wall.x + wall.w / 2;
-            const wTop = wall.y - wall.h / 2;
-            const wBottom = wall.y + wall.h / 2;
+            const wLeft = obstacle.x - obstacle.w / 2;
+            const wRight = obstacle.x + obstacle.w / 2;
+            const wTop = obstacle.y - obstacle.h / 2;
+            const wBottom = obstacle.y + obstacle.h / 2;
 
             const overlapLeft = entity.x + entity.w / 2 - wLeft;
             const overlapRight = wRight - (entity.x - entity.w / 2);
@@ -429,7 +497,9 @@ export function update(state: State, dt: number) {
         }
 
         // if still colliding after resolution, revert — not enough room
-        const stillColliding = walls.some((wall) => isColliding(entity, wall));
+        const stillColliding = getBlockingObstacles().some((obstacle) =>
+          isColliding(entity, obstacle),
+        );
         if (stillColliding) {
           entity.x = savedX;
           entity.y = savedY;
@@ -567,9 +637,9 @@ export function draw(state: State, ctx: CanvasRenderingContext2D) {
           break;
         }
         case "glass": {
-          const { x, y, z } = entity;
-          submitShadow((ctx) => drawGlass(ctx, x, y, true));
-          Renderer.submit(z, (ctx) => drawGlass(ctx, x, y));
+          const { x, y, z, glassState } = entity;
+          submitShadow((ctx) => drawGlass(ctx, x, y, glassState, true));
+          Renderer.submit(z, (ctx) => drawGlass(ctx, x, y, glassState));
           break;
         }
         case "toilet":
