@@ -1,6 +1,7 @@
 import sprite from "./assets/images/sprite.png";
 import playerSprite from "./assets/images/player-sprite.png";
 import playerFrames from "./assets/images/player-sprite.frames.json";
+import { easing } from "@spud.gg/api";
 import { Entity, state } from "./state";
 
 type SpriteSheet = {
@@ -193,6 +194,24 @@ export function drawPlayer(
   const eatFrames = bucket.eat;
   const idleFrames = bucket.idle;
   const usingEat = entity.eatProgress < 1 && eatFrames.length > 0;
+  const wantsToGrowButCant = entity.goalW > entity.w;
+  const showBlockedGrowFx = wantsToGrowButCant && !shadow;
+  // hackathon knobs: tune blocked-grow timing/strength here
+  const blockedWaitSeconds = 0.5;
+  const blockedPushSeconds = 0.2;
+  const blockedFailSeconds = 0.28;
+  const blockedSettleSeconds = 0.22;
+  const blockedCycleSeconds =
+    blockedWaitSeconds +
+    blockedPushSeconds +
+    blockedFailSeconds +
+    blockedSettleSeconds;
+  const blockedGrowScaleAmount = 0.07;
+  const blockedOverlayAlphaMin = 0.16;
+  const blockedOverlayAlphaMax = 0.82;
+  const blockedIconScaleMin = 1;
+  const blockedIconScaleMax = 1.15;
+  const blockedSettleFloor = 0.08;
 
   const frame = usingEat
     ? eatFrames[
@@ -207,6 +226,28 @@ export function drawPlayer(
   const drawH = entity.animatedH;
   const moving = entity.vx !== 0 || entity.vy !== 0;
   const wobbleLeft = Math.floor(state.elapsedSeconds * 3) % 2 === 0;
+  const blockedCycleT = state.elapsedSeconds % blockedCycleSeconds;
+  let blockedAttempt = 0;
+  if (blockedCycleT > blockedWaitSeconds) {
+    const pushEnd = blockedWaitSeconds + blockedPushSeconds;
+    const failEnd = pushEnd + blockedFailSeconds;
+    if (blockedCycleT <= pushEnd) {
+      const t = (blockedCycleT - blockedWaitSeconds) / blockedPushSeconds;
+      blockedAttempt = easing.easeOutCubic(t);
+    } else if (blockedCycleT <= failEnd) {
+      const t = (blockedCycleT - pushEnd) / blockedFailSeconds;
+      blockedAttempt =
+        (1 - easing.easeInOutSine(t)) * (1 - blockedSettleFloor) +
+        blockedSettleFloor;
+    } else {
+      const t = (blockedCycleT - failEnd) / blockedSettleSeconds;
+      blockedAttempt = (1 - easing.easeOutSine(t)) * blockedSettleFloor;
+    }
+  }
+  // mimic the squish feel with an exponential-style curve
+  const blockedSquishEase = 1 - Math.exp(-8 * blockedAttempt);
+  const blockedGrowScale =
+    1 + (showBlockedGrowFx ? blockedSquishEase * blockedGrowScaleAmount : 0);
 
   ctx.save();
   ctx.translate(entity.x, entity.y);
@@ -214,9 +255,13 @@ export function drawPlayer(
     ctx.rotate(wobbleLeft ? Math.PI / 20 : -Math.PI / 20);
   }
   ctx.scale(entity.squishX, entity.squishY);
+  if (showBlockedGrowFx) {
+    ctx.scale(blockedGrowScale, 1);
+  }
   if (entity.flipX) {
     ctx.scale(-1, 1);
   }
+
   const img = shadow && playerShadow ? playerShadow : playerSheetImage;
   ctx.drawImage(
     img,
@@ -229,6 +274,42 @@ export function drawPlayer(
     drawW,
     drawH,
   );
+
+  if (showBlockedGrowFx) {
+    const blockedOverlayAlpha =
+      blockedOverlayAlphaMin +
+      blockedAttempt * (blockedOverlayAlphaMax - blockedOverlayAlphaMin);
+    ctx.save();
+    ctx.globalCompositeOperation = "hue";
+    ctx.globalAlpha = blockedOverlayAlpha;
+    ctx.fillStyle = "red";
+    ctx.fillRect(-drawW / 2, -drawH / 2, drawW, drawH);
+    ctx.restore();
+
+    const blockedIconPulse = easing.easeInOutSine(blockedAttempt);
+    const blockedIconScale =
+      blockedIconScaleMin +
+      blockedIconPulse * (blockedIconScaleMax - blockedIconScaleMin);
+    const blockedIconDrawW = drawW * blockedIconScale;
+    const blockedIconDrawH = drawH * blockedIconScale;
+    const blockedIconX = -blockedIconDrawW / 2;
+    const blockedIconY = -blockedIconDrawH / 2;
+    ctx.save();
+    const blockedIconSourceX = 19 * sheet.frameWidthPx;
+    ctx.drawImage(
+      sheet.image,
+      blockedIconSourceX,
+      0,
+      sheet.frameWidthPx,
+      sheet.frameHeightPx,
+      blockedIconX,
+      blockedIconY,
+      blockedIconDrawW,
+      blockedIconDrawH,
+    );
+    ctx.restore();
+  }
+
   ctx.restore();
 }
 
