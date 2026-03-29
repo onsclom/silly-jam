@@ -208,7 +208,7 @@ export function drawPlayer(
   const idleFrames = bucket.idle;
   const usingEat = entity.eatProgress < 1 && eatFrames.length > 0;
   const wantsToGrowButCant = entity.goalW > entity.w;
-  const showBlockedGrowFx = wantsToGrowButCant && !shadow;
+  const showBlockedGrowFx = wantsToGrowButCant;
   // hackathon knobs: tune blocked-grow timing/strength here
   const blockedWaitSeconds = 0.5;
   const blockedPushSeconds = 0.2;
@@ -303,17 +303,19 @@ export function drawPlayer(
     const blockedIconScale = 1 + blockedIconPulse * blockedIconScaleAmount;
     const blockedIconDrawW = drawW * blockedIconScale;
     const blockedIconDrawH = drawH * blockedIconScale;
-    ctx.drawImage(
-      sheet.image,
-      19 * sheet.frameWidthPx,
-      0,
-      sheet.frameWidthPx,
-      sheet.frameHeightPx,
-      -blockedIconDrawW / 2,
-      -blockedIconDrawH / 2,
-      blockedIconDrawW,
-      blockedIconDrawH,
-    );
+    if (!shadow) {
+      ctx.drawImage(
+        sheet.image,
+        19 * sheet.frameWidthPx,
+        0,
+        sheet.frameWidthPx,
+        sheet.frameHeightPx,
+        -blockedIconDrawW / 2,
+        -blockedIconDrawH / 2,
+        blockedIconDrawW,
+        blockedIconDrawH,
+      );
+    }
   }
 
   ctx.restore();

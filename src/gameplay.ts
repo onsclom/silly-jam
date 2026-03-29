@@ -666,7 +666,6 @@ export function draw(state: State, ctx: CanvasRenderingContext2D) {
         }
         case "plate": {
           const { x, y, index: i, z } = entity;
-          submitShadow((ctx) => drawCrumbs(ctx, x, y, i, true));
           Renderer.submit(z, (ctx) => drawCrumbs(ctx, x, y, i));
           break;
         }
