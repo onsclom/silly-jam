@@ -231,14 +231,15 @@ export function update(state: State, dt: number) {
         player.vy = move.vy;
         const targetX = Math.round(player.x) + move.vx;
         const targetY = Math.round(player.y) + move.vy;
-        const adjacentCrackedGlass = glasses.find(
+        // From rest, pressing into a glass tile ahead: no crack/shatter on that tile this move.
+        const adjacentGlassAhead = glasses.find(
           (glass) =>
-            glass.glassState === 1 &&
+            glass.glassState !== 2 &&
             Math.round(glass.x) === targetX &&
             Math.round(glass.y) === targetY,
         );
-        player.moveStartedAgainstCrackedGlassIndex = adjacentCrackedGlass
-          ? adjacentCrackedGlass.index
+        player.moveStartedAgainstCrackedGlassIndex = adjacentGlassAhead
+          ? adjacentGlassAhead.index
           : -1;
         if (move.flipX !== undefined) player.flipX = move.flipX;
         state.moves++;
@@ -264,8 +265,12 @@ export function update(state: State, dt: number) {
         if (!isColliding(entity, glass)) continue;
 
         if (glass.glassState === 0) {
-          glass.glassState = 1;
-          crackedAnyGlass = true;
+          const startedFromRestAdjacentAndPushedIntoThisGlass =
+            entity.moveStartedAgainstCrackedGlassIndex === glass.index;
+          if (!startedFromRestAdjacentAndPushedIntoThisGlass) {
+            glass.glassState = 1;
+            crackedAnyGlass = true;
+          }
           continue;
         }
 

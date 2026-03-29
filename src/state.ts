@@ -30,7 +30,7 @@ export type Entity = {
   squishX: number; // scale multiplier for squash/stretch (1 = normal)
   squishY: number;
   glassState: 0 | 1 | 2; // 0=solid, 1=cracked, 2=shattered
-  moveStartedAgainstCrackedGlassIndex: number; // player-only helper, -1 means none
+  moveStartedAgainstCrackedGlassIndex: number; // player-only: rest move into glass ahead (solid or cracked), -1 = none
 };
 
 function createEmptyEntity(index: number): Entity {
