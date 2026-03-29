@@ -447,8 +447,12 @@ export function update(state: State, dt: number) {
     }
   }
 
-  // can check for win once after all moving done
-  if (!state.entities.some(({ type }) => type === "burger")) {
+  // only show win once the final bite animation has finished
+  const hasBurgersLeft = state.entities.some(({ type }) => type === "burger");
+  const playerStillEating = state.entities.some(
+    (entity) => entity.type === "player" && entity.eatProgress < 1,
+  );
+  if (!hasBurgersLeft && !playerStillEating) {
     state.winScreen = true;
     state.winScreenTime = 0;
     state.winStats = {
