@@ -209,8 +209,7 @@ export function update(state: State, dt: number) {
       }
       if (hitWall) {
         sfx("hitWall").play({ detune: Math.random() * 1000 - 500 });
-        // idea: shake strength based on player size? (todo)
-        const shakeStrength = 0.4;
+        const shakeStrength = 0.15 * entity.w; // @austin--this might need tuning now! I made it proportional to player size
         state.shakeX = -lastVx * shakeStrength;
         state.shakeY = -lastVy * shakeStrength;
 
