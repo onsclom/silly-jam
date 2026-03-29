@@ -1,4 +1,5 @@
 import sprite from "./assets/images/sprite.png";
+import { state } from "./state";
 
 type SpriteSheet = {
   image: HTMLImageElement;
@@ -64,4 +65,20 @@ export function drawBurger(
 ) {
   const burgerIndex = 8;
   drawSprite(ctx, burgerIndex, x - 0.5, y - 0.5, 1 / sheet.frameWidthPx);
+}
+
+export function drawToilet(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  stinky: boolean,
+) {
+  const toiletIndex = 9;
+  if (!stinky) {
+    drawSprite(ctx, toiletIndex, x - 0.5, y - 0.5, 1 / sheet.frameWidthPx);
+    return;
+  }
+  const indexModifier = Math.floor(state.elapsedSeconds) % 2 === 0 ? 1 : 2;
+  const index = toiletIndex + indexModifier;
+  drawSprite(ctx, index, x - 0.5, y - 0.5, 1 / sheet.frameWidthPx);
 }
