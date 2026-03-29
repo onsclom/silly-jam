@@ -9,8 +9,6 @@ import { levels } from "./levels/levels";
 const canvas = document.createElement("canvas");
 document.body.appendChild(canvas);
 
-addDebugControl();
-
 const ctx = canvas.getContext("2d", { alpha: false })!;
 
 let lastFrameTime = 0;
@@ -39,34 +37,34 @@ function gameLoop(now: number) {
 
 requestAnimationFrame(gameLoop);
 
-function addDebugControl() {
-  const textarea = document.createElement("textarea");
-  textarea.value = levels[0]!;
-  const updateLevel = () => {
-    const level = textarea.value;
-    if (level) {
-      const parsed = parseLevel(level.trim());
-      clearAllEntities();
-      for (const { entity, x, y, flipX } of parsed.entities) {
-        createEntity({
-          type: entity,
-          x,
-          y,
-          w: 1,
-          h: 1,
-          flipX: flipX ?? false,
-        });
-      }
-    }
-  };
+// function addDebugControl() {
+//   const textarea = document.createElement("textarea");
+//   textarea.value = levels[0]!;
+//   const updateLevel = () => {
+//     const level = textarea.value;
+//     if (level) {
+//       const parsed = parseLevel(level.trim());
+//       clearAllEntities();
+//       for (const { entity, x, y, flipX } of parsed.entities) {
+//         createEntity({
+//           type: entity,
+//           x,
+//           y,
+//           w: 1,
+//           h: 1,
+//           flipX: flipX ?? false,
+//         });
+//       }
+//     }
+//   };
 
-  textarea.onkeydown = (e) => e.stopPropagation();
-  textarea.onblur = updateLevel;
+//   textarea.onkeydown = (e) => e.stopPropagation();
+//   textarea.onblur = updateLevel;
 
-  textarea.style = `
-    position: fixed;
-    top: 10px;
-    left: 10px;
-  `;
-  document.body.appendChild(textarea);
-}
+//   textarea.style = `
+//     position: fixed;
+//     top: 10px;
+//     left: 10px;
+//   `;
+//   document.body.appendChild(textarea);
+// }

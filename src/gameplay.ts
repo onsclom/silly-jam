@@ -18,7 +18,9 @@ import { isColliding, expDecay, clamp } from "./util";
 import { parseLevel } from "./parser";
 import { levels } from "./levels/levels";
 import {
+  burgerBoySheet,
   drawBurger,
+  drawBurgerBoyFrame,
   drawCrumbs,
   drawFloor,
   drawGlass,
@@ -29,14 +31,6 @@ import {
 } from "./sprite";
 import { state } from "./state";
 import * as Renderer from "./renderer";
-import playerSprite from "./assets/images/player-sprite.png";
-import playerFrames from "./assets/images/player-sprite.frames.json";
-
-const titlePlayerImage = new Image();
-titlePlayerImage.src = playerSprite;
-const titlePlayerIdleFrames = playerFrames.filter(
-  (f) => f.size === "small" && f.eat === undefined && !f.squish,
-);
 
 const DEBUG = true;
 const SHADOWS_ENABLED = true; // @seb in case you don't like these
@@ -1090,28 +1084,14 @@ function drawTitleScreen(
   const playerScale = playerEntranceT * (2 - playerEntranceT); // ease out
   const playerSize = minSide * 0.3;
 
-  if (titlePlayerImage.complete && titlePlayerIdleFrames.length > 0) {
-    const frame =
-      titlePlayerIdleFrames[
-        Math.floor(state.elapsedSeconds * 2) % titlePlayerIdleFrames.length
-      ]!;
+  if (burgerBoySheet.image.complete) {
     ctx.save();
     ctx.translate(cx, height * 0.42);
     ctx.scale(playerScale, playerScale);
-    // wobble
     const wobble = Math.sin(state.elapsedSeconds * 2) * 0.05;
     ctx.rotate(wobble);
-    ctx.drawImage(
-      titlePlayerImage,
-      frame.x,
-      frame.y,
-      frame.w,
-      frame.h,
-      -playerSize / 2,
-      -playerSize / 2,
-      playerSize,
-      playerSize,
-    );
+    // frame 1 = first 330×330 cell (left)
+    drawBurgerBoyFrame(ctx, 0, 0, 0, playerSize);
     ctx.restore();
   }
 

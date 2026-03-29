@@ -1,4 +1,5 @@
 import sprite from "./assets/images/sprite.png";
+import burgerBoySprite from "./assets/images/burger-boy.png";
 import playerSprite from "./assets/images/player-sprite.png";
 import playerFrames from "./assets/images/player-sprite.frames.json";
 import { easing } from "@spud.gg/api";
@@ -19,6 +20,16 @@ export const sheet: SpriteSheet = {
 };
 
 sheet.image.src = sprite;
+
+/** 660×330 strip: two 330×330 frames. */
+export const burgerBoySheet: SpriteSheet = {
+  image: new Image(),
+  frameWidthPx: 330,
+  frameHeightPx: 330,
+  frameCount: 2,
+};
+burgerBoySheet.image.src = burgerBoySprite;
+
 const playerSheetImage = new Image();
 playerSheetImage.src = playerSprite;
 
@@ -71,6 +82,30 @@ export function drawSprite(
     y,
     drawWidthPx,
     drawHeightPx,
+  );
+}
+
+/** Draw one frame centered at `(cx, cy)`, scaled to a square of side `sizePx`. */
+export function drawBurgerBoyFrame(
+  ctx: CanvasRenderingContext2D,
+  frameIndex: number,
+  cx: number,
+  cy: number,
+  sizePx: number,
+) {
+  const frame = frameIndex % burgerBoySheet.frameCount;
+  const srcX = frame * burgerBoySheet.frameWidthPx;
+  const half = sizePx / 2;
+  ctx.drawImage(
+    burgerBoySheet.image,
+    srcX,
+    0,
+    burgerBoySheet.frameWidthPx,
+    burgerBoySheet.frameHeightPx,
+    cx - half,
+    cy - half,
+    sizePx,
+    sizePx,
   );
 }
 
