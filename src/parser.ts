@@ -12,6 +12,7 @@ const EntityType = {
   Wall: "wall",
   Burger: "burger",
   Toilet: "toilet",
+  Glass: "glass",
   None: "none",
 } as const;
 
@@ -30,6 +31,7 @@ const entityByChar: Record<string, Omit<ParsedEntity, "x" | "y">> = {
   b: { entity: "burger" },
   t: { entity: "toilet", flipX: false },
   T: { entity: "toilet", flipX: true },
+  g: { entity: "glass" },
 };
 
 export function parseLevel(level: string) {
