@@ -141,7 +141,9 @@ export function tutorialKeySound() {
     "grunt8",
   ] as const;
   const sound = grunts[Math.floor(Math.random() * grunts.length)]!;
-  sfx(sound).play();
+  sfx(sound).play({
+    volume: 0.25,
+  });
   sfx("hitWall").play({
     detune: Math.random() * 300 - 150,
     volume: 0.3,
