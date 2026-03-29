@@ -15,7 +15,7 @@ export const sheet: SpriteSheet = {
   image: new Image(),
   frameWidthPx: 259,
   frameHeightPx: 259,
-  frameCount: 20,
+  frameCount: 24,
 };
 
 sheet.image.src = sprite;
@@ -101,6 +101,17 @@ export function drawBurger(
   ctx.rotate(rotate ? Math.PI / 20 : -Math.PI / 20);
   drawSprite(ctx, burgerIndex, -0.5, -0.5, tileScale, shadow);
   ctx.restore();
+}
+
+export function drawGlass(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  shadow = false,
+) {
+  const glassIndex = 21;
+  const tileScale = 1.01 / sheet.frameWidthPx;
+  drawSprite(ctx, glassIndex, x - 0.5, y - 0.5, tileScale, shadow);
 }
 
 export function drawToilet(

@@ -7,6 +7,7 @@ export type Entity = {
     | "none"
     | "player"
     | "wall"
+    | "glass"
     | "burger"
     | "toilet"
     | "plate"

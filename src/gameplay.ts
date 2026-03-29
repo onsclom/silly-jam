@@ -14,6 +14,7 @@ import {
   drawBurger,
   drawCrumbs,
   drawFloor,
+  drawGlass,
   drawPlayer,
   drawToilet,
   drawWall,
@@ -563,6 +564,12 @@ export function draw(state: State, ctx: CanvasRenderingContext2D) {
           const { x, y, z } = entity;
           submitShadow((ctx) => drawBurger(ctx, x, y, true));
           Renderer.submit(z, (ctx) => drawBurger(ctx, x, y));
+          break;
+        }
+        case "glass": {
+          const { x, y, z } = entity;
+          submitShadow((ctx) => drawGlass(ctx, x, y, true));
+          Renderer.submit(z, (ctx) => drawGlass(ctx, x, y));
           break;
         }
         case "toilet":
