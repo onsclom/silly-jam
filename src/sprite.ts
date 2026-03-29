@@ -175,6 +175,7 @@ export function drawPlayer(ctx: CanvasRenderingContext2D, entity: Entity) {
   if (moving) {
     ctx.rotate(wobbleLeft ? Math.PI / 20 : -Math.PI / 20);
   }
+  ctx.scale(entity.squishX, entity.squishY);
   if (entity.flipX) {
     ctx.scale(-1, 1);
   }
