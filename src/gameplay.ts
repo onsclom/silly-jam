@@ -158,11 +158,13 @@ export function update(state: State, dt: number) {
 
   if (DEBUG) {
     if (state.justPressed.includes("q")) {
-      startTransition(wrapLevel(state.level - 1));
+      state.level = wrapLevel(state.level - 1);
+      prepLevel(state.level);
       return;
     }
     if (state.justPressed.includes("e")) {
-      startTransition(wrapLevel(state.level + 1));
+      state.level = wrapLevel(state.level + 1);
+      prepLevel(state.level);
       return;
     }
   }
@@ -289,7 +291,12 @@ export function update(state: State, dt: number) {
         }
       }
       if (hitWall) {
-        sfx("hitWall").play({ detune: Math.random() * 1000 - 500 });
+        const sizeScale = entity.w ** 1.5;
+        sfx("hitWall").play({
+          detune: Math.random() * 300 - 150,
+          volume: Math.min(2, sizeScale),
+          playbackRate: 1 / entity.w ** 0.5,
+        });
         const shakeStrength = 0.15 * entity.w ** 1.5;
         state.shakeX = -lastVx * shakeStrength;
         state.shakeY = -lastVy * shakeStrength;
@@ -621,7 +628,19 @@ export function draw(state: State, ctx: CanvasRenderingContext2D) {
     ctx.font = "bold 48px sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText("UNDO", width / 2, height / 2);
+    ctx.shadowColor = "black";
+    ctx.shadowBlur = 0;
+    for (const [dx, dy] of [
+      [-2, 0],
+      [2, 0],
+      [0, -2],
+      [0, 2],
+    ]) {
+      ctx.shadowOffsetX = dx!;
+      ctx.shadowOffsetY = dy!;
+      ctx.fillText("UNDO", width / 2, height / 2);
+    }
+    ctx.shadowColor = "transparent";
     ctx.globalAlpha = 1;
   }
 
@@ -676,12 +695,12 @@ function drawTransition(
       const cy = row * BURGER_TILE_SIZE;
       const size = drawSize * scale;
 
-      const wobble =
-        Math.sin(localT * Math.PI * 2 + col * 0.7 + row * 1.1) * 0.15;
+      const tiltAmount = covering ? 1 - localT : localT;
+      const tilt = (col % 2 === row % 2 ? 1 : -1) * 0.4 * tiltAmount;
 
       ctx.save();
       ctx.translate(cx, cy);
-      ctx.rotate(wobble);
+      ctx.rotate(tilt);
       ctx.drawImage(
         sheet.image,
         srcX,
