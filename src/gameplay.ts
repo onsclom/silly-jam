@@ -293,7 +293,7 @@ export function update(state: State, dt: number) {
       if (hitWall) {
         // const sizeScale = entity.w ** 1.5;
         hitWallSound(entity);
-        const shakeStrength = 0.15 * entity.w ** 1.5;
+        const shakeStrength = 0.09 * entity.w ** 1.5;
         state.shakeX = -lastVx * shakeStrength;
         state.shakeY = -lastVy * shakeStrength;
 
