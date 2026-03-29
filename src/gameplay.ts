@@ -239,6 +239,8 @@ export function update(state: State, dt: number) {
             { ...burger, w: burger.w / 2, h: burger.h / 2 },
           )
         ) {
+          const wasEating = entity.eatProgress < 1;
+          const eatProgressBeforeChomp = entity.eatProgress;
           chompSound();
           createEntity({
             type: "plate",
@@ -251,6 +253,7 @@ export function update(state: State, dt: number) {
           removeEntity(burger.index);
           entity.goalW += burgerSizeChangeAmount;
           entity.goalH += burgerSizeChangeAmount;
+          entity.eatProgress = wasEating ? eatProgressBeforeChomp : 0;
         }
       }
       for (const toilet of toilets) {
@@ -335,6 +338,10 @@ export function update(state: State, dt: number) {
           entity.w = savedW;
           entity.h = savedH;
         }
+      }
+
+      if (entity.eatProgress < 1) {
+        entity.eatProgress = Math.min(1, entity.eatProgress + dt / 300);
       }
     }
   }
@@ -433,7 +440,7 @@ export function draw(state: State, ctx: CanvasRenderingContext2D) {
           // - squished effect
           // - idle vs walk vs eat + grow animation
           // - maybe a hand-drawn outline so rectangle is still visible?
-          drawPlayer(ctx, entity.x, entity.y);
+          drawPlayer(ctx, entity);
           break;
         }
         case "floor": {

@@ -35,14 +35,14 @@
     "y": 124,
     "w": 107,
     "h": 126,
-    "size": "med"
+    "size": "medium"
   },
   {
     "x": 655,
     "y": 123,
     "w": 112,
     "h": 127,
-    "size": "med",
+    "size": "medium",
     "squish": true
   },
   {
@@ -50,7 +50,7 @@
     "y": 126,
     "w": 107,
     "h": 124,
-    "size": "med",
+    "size": "medium",
     "eat": 0
   },
   {
@@ -58,7 +58,7 @@
     "y": 90,
     "w": 116,
     "h": 160,
-    "size": "med",
+    "size": "medium",
     "eat": 1
   },
   {
@@ -66,7 +66,7 @@
     "y": 105,
     "w": 162,
     "h": 145,
-    "size": "med",
+    "size": "medium",
     "eat": 2
   },
   {
