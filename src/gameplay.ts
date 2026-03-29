@@ -19,8 +19,10 @@ import {
   drawWall,
 } from "./sprite";
 import { state } from "./state";
+import * as Renderer from "./renderer";
 
 const DEBUG = true;
+const SHADOWS_ENABLED = true; // @seb in case you don't like these
 const MAX_UNDO_STACK = 128;
 const WIN_SCREEN_INPUT_DELAY = 0.5; // prevents accidently startiong next level too soon
 
@@ -472,61 +474,80 @@ export function draw(state: State, ctx: CanvasRenderingContext2D) {
     ctx.textBaseline = "middle";
     ctx.font = "1px sans-serif";
 
-    const zAxisSortedEntities = state.entities
-      .filter((e) => e.type !== "none")
-      .sort((a, b) => a.z - b.z);
-    for (const entity of zAxisSortedEntities) {
+    const SHADOW_OFFSET = 0.12;
+    const SHADOW_Z = -0.5; // between everything and floor
+
+    for (const entity of state.entities) {
+      if (entity.type === "none") continue;
+
+      // helper to submit a shadow version of a draw call
+      const submitShadow = !SHADOWS_ENABLED
+        ? () => {}
+        : (drawFn: (ctx: CanvasRenderingContext2D) => void) => {
+            Renderer.submit(SHADOW_Z, (ctx) => {
+              ctx.save();
+              ctx.translate(SHADOW_OFFSET, SHADOW_OFFSET);
+              drawFn(ctx);
+              ctx.restore();
+            });
+          };
+
       switch (entity.type) {
         case "player": {
-          // ctx.strokeRect(
-          //   entity.x - entity.animatedW / 2,
-          //   entity.y - entity.animatedH / 2,
-          //   entity.animatedW,
-          //   entity.animatedH,
-          // );
-          // todo:
-          // - facing left or right
-          // - squished effect
-          // - idle vs walk vs eat + grow animation
-          // - maybe a hand-drawn outline so rectangle is still visible?
-          drawPlayer(ctx, entity);
+          const e = entity;
+          submitShadow((ctx) => drawPlayer(ctx, e, true));
+          Renderer.submit(entity.z, (ctx) => drawPlayer(ctx, e));
           break;
         }
         case "floor": {
-          drawFloor(ctx, entity);
+          const e = entity;
+          Renderer.submit(entity.z, (ctx) => drawFloor(ctx, e));
           break;
         }
         case "wall": {
-          drawWall(ctx, entity.x, entity.y, entity.index);
+          const { x, y, index: i, z } = entity;
+          submitShadow((ctx) => drawWall(ctx, x, y, i, true));
+          Renderer.submit(z, (ctx) => drawWall(ctx, x, y, i));
           break;
         }
         case "burger": {
-          drawBurger(ctx, entity.x, entity.y);
+          const { x, y, z } = entity;
+          submitShadow((ctx) => drawBurger(ctx, x, y, true));
+          Renderer.submit(z, (ctx) => drawBurger(ctx, x, y));
           break;
         }
         case "toilet":
         case "poop": {
+          const { x, y, z, flipX } = entity;
           const isStinky = entity.type === "poop";
-          ctx.save();
-          if (isStinky) ctx.globalAlpha = 0.4;
-          if (entity.flipX) {
+          const drawIt = (ctx: CanvasRenderingContext2D, shadow = false) => {
             ctx.save();
-            ctx.translate(entity.x, entity.y);
-            ctx.scale(-1, 1);
-            drawToilet(ctx, 0, 0, isStinky);
+            if (isStinky) ctx.globalAlpha = 0.4;
+            if (flipX) {
+              ctx.save();
+              ctx.translate(x, y);
+              ctx.scale(-1, 1);
+              drawToilet(ctx, 0, 0, isStinky, shadow);
+              ctx.restore();
+            } else {
+              drawToilet(ctx, x, y, isStinky, shadow);
+            }
             ctx.restore();
-          } else {
-            drawToilet(ctx, entity.x, entity.y, isStinky);
-          }
-          ctx.restore();
+          };
+          if (!isStinky) submitShadow((ctx) => drawIt(ctx, true));
+          Renderer.submit(z, (ctx) => drawIt(ctx));
           break;
         }
         case "plate": {
-          drawCrumbs(ctx, entity.x, entity.y, entity.index);
+          const { x, y, index: i, z } = entity;
+          submitShadow((ctx) => drawCrumbs(ctx, x, y, i, true));
+          Renderer.submit(z, (ctx) => drawCrumbs(ctx, x, y, i));
           break;
         }
       }
     }
+
+    Renderer.flush(ctx);
   });
 
   // Level counter top-right
