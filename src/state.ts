@@ -29,6 +29,8 @@ export type Entity = {
   z: number; // z-axis for drawing
   squishX: number; // scale multiplier for squash/stretch (1 = normal)
   squishY: number;
+  glassState: 0 | 1 | 2; // 0=solid, 1=cracked, 2=shattered
+  moveStartedAgainstCrackedGlassIndex: number; // player-only helper, -1 means none
 };
 
 function createEmptyEntity(index: number): Entity {
@@ -50,6 +52,8 @@ function createEmptyEntity(index: number): Entity {
     z: 0,
     squishX: 1,
     squishY: 1,
+    glassState: 0,
+    moveStartedAgainstCrackedGlassIndex: -1,
   };
 }
 
