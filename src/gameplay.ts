@@ -27,10 +27,35 @@ function prepLevel(index: number) {
   clearAllEntities();
   state.undoStack = [];
   state.pendingUndoSnapshot = null;
-  // create checkerboard floor tiles
-  for (let y = 0; y < parsed.level.height; y++) {
-    for (let x = 0; x < parsed.level.width; x++) {
+  // floodfill floor tiles from player start, bounded by walls
+  const walls = new Set<string>();
+  let playerStart: { x: number; y: number } | null = null;
+  for (const { entity, x, y } of parsed.entities) {
+    if (entity === "wall") walls.add(`${x},${y}`);
+    if (entity === "player") playerStart = { x, y };
+  }
+  if (playerStart) {
+    const MAX_FLOOD = 500;
+    const visited = new Set<string>();
+    const queue = [playerStart];
+    visited.add(`${playerStart.x},${playerStart.y}`);
+    while (queue.length > 0 && visited.size < MAX_FLOOD) {
+      const { x, y } = queue.shift()!;
       createEntity({ type: "floor", x, y, w: 1, h: 1, z: -1 });
+      for (const [dx, dy] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+      ]) {
+        const nx = x + dx!;
+        const ny = y + dy!;
+        const key = `${nx},${ny}`;
+        if (!visited.has(key) && !walls.has(key)) {
+          visited.add(key);
+          queue.push({ x: nx, y: ny });
+        }
+      }
     }
   }
   for (const { entity, x, y } of parsed.entities) {
