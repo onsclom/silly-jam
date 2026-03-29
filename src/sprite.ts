@@ -114,16 +114,14 @@ export function drawBurgerBoyFrame(
 const autoTileMap: Record<number, { row: number; index: number }> = {
   0b0000: { row: 0, index: 4 },  // no neighbors
   0b0001: { row: 1, index: 0 },  // top only
-  0b0011: { row: 1, index: 1 },  // top + right
-  0b1001: { row: 1, index: 2 },  // left + top
-  0b1100: { row: 1, index: 3 },  // left + bottom
   0b0010: { row: 1, index: 4 },  // right only
   0b1000: { row: 1, index: 5 },  // left only
-  0b0110: { row: 1, index: 6 },  // bottom + right
   0b0100: { row: 1, index: 7 },  // bottom only
-  0b1010: { row: 1, index: 8 },  // left + right
-  0b0101: { row: 1, index: 9 },  // top + bottom
 };
+
+// The "all neighbors" base tile (full brick, no exposed edges)
+// Used as the quadrant source when both adjacent neighbors are present
+const allNeighborsTile = { row: 0, index: 0 };
 
 // 9-patch compositing for 3- and 4-neighbor tiles.
 // Each quadrant's appearance depends on 2 adjacent neighbors.
@@ -151,18 +149,26 @@ function getQuadrantSource(mask: number): [
   const blMask = (hasBottom ? 4 : 0) | (hasLeft ? 8 : 0);
   const brMask = (hasBottom ? 4 : 0) | (hasRight ? 2 : 0);
 
+  // Corner sub-masks where both neighbors are present — use the all-neighbors tile
+  const cornerMasks = new Set([0b0011, 0b1001, 0b1100, 0b0110]);
+
   return [
-    autoTileMap[tlMask]!,
-    autoTileMap[trMask]!,
-    autoTileMap[blMask]!,
-    autoTileMap[brMask]!,
+    cornerMasks.has(tlMask) ? allNeighborsTile : autoTileMap[tlMask]!,
+    cornerMasks.has(trMask) ? allNeighborsTile : autoTileMap[trMask]!,
+    cornerMasks.has(blMask) ? allNeighborsTile : autoTileMap[blMask]!,
+    cornerMasks.has(brMask) ? allNeighborsTile : autoTileMap[brMask]!,
   ];
 }
 
 // Pre-baked canvases for composite tiles (3- and 4-neighbor cases)
 const compositeTiles: Record<number, HTMLCanvasElement> = {};
 const compositeShadowTiles: Record<number, HTMLCanvasElement> = {};
-const compositeMasks = [0b0111, 0b1011, 0b1101, 0b1110, 0b1111];
+const compositeMasks = [
+  // 2-neighbor cases (generated from 1-neighbor + all-neighbor tiles)
+  0b0011, 0b1001, 0b1100, 0b0110, 0b1010, 0b0101,
+  // 3- and 4-neighbor cases
+  0b0111, 0b1011, 0b1101, 0b1110, 0b1111,
+];
 
 function bakeCompositeTiles() {
   const fw = sheet.frameWidthPx;
