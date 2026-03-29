@@ -337,7 +337,7 @@ export function update(state: State, dt: number) {
         ) {
           const wasEating = entity.eatProgress < 1;
           const eatProgressBeforeChomp = entity.eatProgress;
-          chompSound();
+          chompSound(entity);
           createEntity({
             type: "plate",
             x: burger.x,

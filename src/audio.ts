@@ -54,10 +54,12 @@ export const sfx = audio.createSounds({
 });
 
 let chompIndex = 0;
-export function chompSound() {
+export function chompSound(player: Entity) {
   const chomps = ["chomp1", "chomp3", "chomp4", "chomp5", "chomp6"] as const;
   const sound = chomps[chompIndex]!;
-  sfx(sound).play();
+  sfx(sound).play({
+    detune: 900 - player.w * 450,
+  });
   chompIndex = (chompIndex + 1) % chomps.length;
 }
 
