@@ -25,6 +25,7 @@ import {
   drawCrumbs,
   drawFloor,
   drawGlass,
+  drawGlassShatterFx,
   drawPlayer,
   drawSheetCellCentered,
   drawToilet,
@@ -367,6 +368,17 @@ export function update(state: State, dt: number) {
           entity.moveStartedAgainstCrackedGlassIndex === glass.index;
         if (!startedFromRestAdjacentAndPushedIntoThisGlass) {
           glass.glassState = 2;
+          const brokeFromLeft = entity.vx > 0;
+          createEntity({
+            type: "glassShatterFx",
+            x: glass.x + (brokeFromLeft ? 1 : -1),
+            y: glass.y,
+            w: 1,
+            h: 1,
+            z: 1,
+            flipX: !brokeFromLeft,
+            shatterFxStartedAt: state.elapsedSeconds,
+          });
           shatteredAnyGlass = true;
         }
       }
@@ -776,6 +788,21 @@ export function draw(state: State, ctx: CanvasRenderingContext2D) {
           const { x, y, z, glassState } = entity;
           submitShadow((ctx) => drawGlass(ctx, x, y, glassState, true));
           Renderer.submit(z, (ctx) => drawGlass(ctx, x, y, glassState));
+          break;
+        }
+        case "glassShatterFx": {
+          const { x, y, z, flipX, shatterFxStartedAt } = entity;
+          Renderer.submit(z, (ctx) => {
+            if (flipX) {
+              ctx.save();
+              ctx.translate(x, y);
+              ctx.scale(-1, 1);
+              drawGlassShatterFx(ctx, 0, 0, shatterFxStartedAt);
+              ctx.restore();
+              return;
+            }
+            drawGlassShatterFx(ctx, x, y, shatterFxStartedAt);
+          });
           break;
         }
         case "toilet":

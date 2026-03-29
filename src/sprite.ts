@@ -333,6 +333,30 @@ export function drawGlass(
   drawSprite(ctx, glassIndex, x - 0.5, y - 0.5, tileScale, shadow);
 }
 
+export function drawGlassShatterFx(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  startedAt: number,
+) {
+  const frameDuration = 1 / 12;
+  const frameCount = 3;
+  const elapsed = Math.max(0, state.elapsedSeconds - startedAt);
+  const frame = Math.min(frameCount - 1, Math.floor(elapsed / frameDuration));
+  const spriteIndex = 5 + frame;
+  const scaleByFrame = [1, 0.75, 0.5] as const;
+  const size = scaleByFrame[frame]! * 1.01;
+  drawSprite(
+    ctx,
+    spriteIndex,
+    x - size / 2,
+    y + 0.5 - size,
+    size / sheet.frameWidthPx,
+    false,
+    0,
+  );
+}
+
 export function drawToilet(
   ctx: CanvasRenderingContext2D,
   x: number,
