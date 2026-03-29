@@ -146,18 +146,16 @@ export function drawBurgerBoyFrame(
 // Auto-tile neighbor bitmask: top=1, right=2, bottom=4, left=8
 // Maps bitmask -> sprite index on row 2 of the sprite sheet
 const autoTileMap: Record<number, { row: number; index: number }> = {
-  0b0000: { row: 0, index: 4 }, // no neighbors
-  0b0001: { row: 1, index: 0 }, // top only
-  0b0011: { row: 1, index: 1 }, // top + right
-  0b1001: { row: 1, index: 2 }, // left + top
-  0b1100: { row: 1, index: 3 }, // left + bottom
-  0b0010: { row: 1, index: 4 }, // right only
-  0b1000: { row: 1, index: 5 }, // left only
-  0b0110: { row: 1, index: 6 }, // bottom + right
-  0b0100: { row: 1, index: 7 }, // bottom only
-  0b1010: { row: 1, index: 8 }, // left + right
-  0b0101: { row: 1, index: 9 }, // top + bottom
+  0b0000: { row: 0, index: 4 },  // no neighbors
+  0b0001: { row: 1, index: 0 },  // top only
+  0b0010: { row: 1, index: 4 },  // right only
+  0b1000: { row: 1, index: 5 },  // left only
+  0b0100: { row: 1, index: 7 },  // bottom only
 };
+
+// The "all neighbors" base tile (full brick, no exposed edges)
+// Used as the quadrant source when both adjacent neighbors are present
+const allNeighborsTile = { row: 0, index: 0 };
 
 // 9-patch compositing for 3- and 4-neighbor tiles.
 // Each quadrant's appearance depends on 2 adjacent neighbors.
@@ -185,18 +183,26 @@ function getQuadrantSource(mask: number): [
   const blMask = (hasBottom ? 4 : 0) | (hasLeft ? 8 : 0);
   const brMask = (hasBottom ? 4 : 0) | (hasRight ? 2 : 0);
 
+  // Corner sub-masks where both neighbors are present — use the all-neighbors tile
+  const cornerMasks = new Set([0b0011, 0b1001, 0b1100, 0b0110]);
+
   return [
-    autoTileMap[tlMask]!,
-    autoTileMap[trMask]!,
-    autoTileMap[blMask]!,
-    autoTileMap[brMask]!,
+    cornerMasks.has(tlMask) ? allNeighborsTile : autoTileMap[tlMask]!,
+    cornerMasks.has(trMask) ? allNeighborsTile : autoTileMap[trMask]!,
+    cornerMasks.has(blMask) ? allNeighborsTile : autoTileMap[blMask]!,
+    cornerMasks.has(brMask) ? allNeighborsTile : autoTileMap[brMask]!,
   ];
 }
 
 // Pre-baked canvases for composite tiles (3- and 4-neighbor cases)
 const compositeTiles: Record<number, HTMLCanvasElement> = {};
 const compositeShadowTiles: Record<number, HTMLCanvasElement> = {};
-const compositeMasks = [0b0111, 0b1011, 0b1101, 0b1110, 0b1111];
+const compositeMasks = [
+  // 2-neighbor cases (generated from 1-neighbor + all-neighbor tiles)
+  0b0011, 0b1001, 0b1100, 0b0110, 0b1010, 0b0101,
+  // 3- and 4-neighbor cases
+  0b0111, 0b1011, 0b1101, 0b1110, 0b1111,
+];
 
 function bakeCompositeTiles() {
   const fw = sheet.frameWidthPx;
@@ -534,9 +540,37 @@ export function drawPlayer(
 
 // todo probably pre-bake these multi-tile subtile things
 // or at least just compute once per level instead of every draw
-export function drawFloor(ctx: CanvasRenderingContext2D, entity: Entity) {
+/**
+ * @param floorMask - If > 0, this is a wall-floor: only draw nine-patch sections
+ *   facing non-wall neighbors. Bitmask: top=1, right=2, bottom=4, left=8.
+ *   0 means draw the full floor tile.
+ */
+export function drawFloor(ctx: CanvasRenderingContext2D, entity: Entity, floorMask = 0) {
   const { x, y, index } = entity;
   const floorSubdivisionCount = 4;
+  const half = 0.5;
+
+  if (floorMask > 0) {
+    // Clip to half-tile strips facing each adjacent floor.
+    // Each side that has a floor neighbor gets a half-tile-wide strip on that edge.
+    // Corners are included when both adjacent edges have floors.
+    const hasTop = (floorMask & 1) !== 0;
+    const hasRight = (floorMask & 2) !== 0;
+    const hasBottom = (floorMask & 4) !== 0;
+    const hasLeft = (floorMask & 8) !== 0;
+
+    ctx.save();
+    ctx.beginPath();
+    const tileLeft = x - 0.5;
+    const tileTop = y - 0.5;
+    // Add a rect for each side that faces a floor
+    if (hasTop) ctx.rect(tileLeft, tileTop, 1.01, half);
+    if (hasBottom) ctx.rect(tileLeft, tileTop + half, 1.01, half + 0.01);
+    if (hasLeft) ctx.rect(tileLeft, tileTop, half, 1.01);
+    if (hasRight) ctx.rect(tileLeft + half, tileTop, half + 0.01, 1.01);
+    ctx.clip();
+  }
+
   ctx.fillStyle = "#f0f0f2";
   ctx.fillRect(x - 0.5, y - 0.5, 1.01, 1.01);
   const opacities = [0.3, 0.4, 0.2, 0.6, 0.35, 0.4, 0.3, 0.4, 0.25, 0.6, 0.35];
@@ -573,5 +607,9 @@ export function drawFloor(ctx: CanvasRenderingContext2D, entity: Entity) {
       );
       ctx.restore();
     }
+  }
+
+  if (floorMask > 0) {
+    ctx.restore();
   }
 }

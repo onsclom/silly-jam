@@ -660,9 +660,13 @@ export function draw(state: State, ctx: CanvasRenderingContext2D) {
 
     // Build set of wall/glass neighbor positions for auto-tiling
     const wallNeighborSet = new Set<string>();
+    const floorSet = new Set<string>();
     for (const e of state.entities) {
       if (e.type === "wall" || e.type === "glass") {
         wallNeighborSet.add(`${e.x},${e.y}`);
+      }
+      if (e.type === "floor") {
+        floorSet.add(`${e.x},${e.y}`);
       }
     }
 
@@ -690,7 +694,18 @@ export function draw(state: State, ctx: CanvasRenderingContext2D) {
         }
         case "floor": {
           const e = entity;
-          Renderer.submit(entity.z, (ctx) => drawFloor(ctx, e));
+          if (wallNeighborSet.has(`${e.x},${e.y}`)) {
+            // Compute which sides have actual floor tiles: top=1, right=2, bottom=4, left=8
+            let floorMask = 0;
+            if (floorSet.has(`${e.x},${e.y - 1}`) && !wallNeighborSet.has(`${e.x},${e.y - 1}`)) floorMask |= 1;
+            if (floorSet.has(`${e.x + 1},${e.y}`) && !wallNeighborSet.has(`${e.x + 1},${e.y}`)) floorMask |= 2;
+            if (floorSet.has(`${e.x},${e.y + 1}`) && !wallNeighborSet.has(`${e.x},${e.y + 1}`)) floorMask |= 4;
+            if (floorSet.has(`${e.x - 1},${e.y}`) && !wallNeighborSet.has(`${e.x - 1},${e.y}`)) floorMask |= 8;
+            if (floorMask === 0) break; // no adjacent non-wall floors, skip
+            Renderer.submit(entity.z, (ctx) => drawFloor(ctx, e, floorMask));
+          } else {
+            Renderer.submit(entity.z, (ctx) => drawFloor(ctx, e));
+          }
           break;
         }
         case "wall": {
