@@ -167,37 +167,27 @@ export function drawPlayer(ctx: CanvasRenderingContext2D, entity: Entity) {
 
   const drawW = entity.animatedW;
   const drawH = entity.animatedH;
-  const drawX = entity.x - drawW / 2;
-  const drawY = entity.y + entity.animatedH / 2 - drawH;
+  const moving = entity.vx !== 0 || entity.vy !== 0;
+  const wobbleLeft = Math.floor(state.elapsedSeconds * 3) % 2 === 0;
 
-  if (entity.flipX) {
-    ctx.save();
-    ctx.translate(entity.x, 0);
-    ctx.scale(-1, 1);
-    ctx.drawImage(
-      playerSheetImage,
-      frame.x,
-      frame.y,
-      frame.w,
-      frame.h,
-      drawX - entity.x,
-      drawY,
-      drawW,
-      drawH,
-    );
-    ctx.restore();
-    return;
+  ctx.save();
+  ctx.translate(entity.x, entity.y);
+  if (moving) {
+    ctx.rotate(wobbleLeft ? Math.PI / 20 : -Math.PI / 20);
   }
-
+  if (entity.flipX) {
+    ctx.scale(-1, 1);
+  }
   ctx.drawImage(
     playerSheetImage,
     frame.x,
     frame.y,
     frame.w,
     frame.h,
-    drawX,
-    drawY,
+    -drawW / 2,
+    -drawH / 2,
     drawW,
     drawH,
   );
+  ctx.restore();
 }
