@@ -71,21 +71,31 @@ export const menuMusic = audio.createMusic({
   volume: 0,
 });
 
-export function movementSound(player: Entity) {
-  // todo: speed (+ pitch) up when entity is small. slower/lower when large.
-  const grunts = ["grunt6", "grunt7", "grunt8"] as const;
-  const sound = grunts[Math.floor(Math.random() * grunts.length)]!;
-  sfx(sound).play({
-    volume: 0.3,
-  });
-}
+// idea if we want the player to make a sound when they kick off of a wall
+// or maybe instead of grunt we use a softer hitWall sound.
+// export function movementSound(player: Entity) {
+//   // todo: speed (+ pitch) up when entity is small. slower/lower when large.
+//   const grunts = ["grunt6", "grunt7", "grunt8"] as const;
+//   const sound = grunts[Math.floor(Math.random() * grunts.length)]!;
+//   sfx(sound).play({
+//     volume: 0.3,
+//   });
+// }
 
 export function hitWallSound(player: Entity) {
+  // const sizeScale = player.w ** 1.5;
   // todo: speed (+ pitch) up when entity is small. slower/lower when large.
   const grunts = ["grunt1", "grunt2", "grunt3", "grunt4", "grunt5"] as const;
   const sound = grunts[Math.floor(Math.random() * grunts.length)]!;
-  sfx(sound).play();
-  sfx("hitWall").play({ volume: 0.3 });
+  sfx(sound).play({
+    detune: 1500 - player.w * 750,
+  });
+  sfx("hitWall").play({
+    // volume: Math.min(2, sizeScale), // todo: find a good range for this.
+    detune: Math.random() * 300 - 150,
+    volume: 0.3,
+    playbackRate: 1 / player.w ** 0.5,
+  });
 }
 
 /*
