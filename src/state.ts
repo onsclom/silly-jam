@@ -85,7 +85,40 @@ export function clearAllEntities() {
   });
 }
 
+export type TutorialKey = {
+  label: string;
+  keys: string[]; // which keyboard keys trigger this
+  originX: number; // layout position (normalized, -1 to 1 ish)
+  originY: number;
+  popped: boolean;
+  popTime: number;
+  bobPhase: number; // phase offset for oscillation
+  bobSpeedX: number;
+  bobSpeedY: number;
+  bobRadiusX: number;
+  bobRadiusY: number;
+  popScale: number; // 1 = visible, decays to 0 when popped
+};
+
+function makeTutorialKeys(): TutorialKey[] {
+  // Arrow keys in a cross layout, U and R below on either side
+  return [
+    // ↑ top center (above the bottom row)
+    { label: "↑", keys: ["ArrowUp", "w"], originX: 0, originY: -1.1, popped: false, popTime: 0, bobPhase: 0, bobSpeedX: 0.5, bobSpeedY: 0.7, bobRadiusX: 3, bobRadiusY: 2, popScale: 1 },
+    // ← ↓ → bottom row, like a real keyboard
+    { label: "←", keys: ["ArrowLeft", "a"], originX: -1.1, originY: 0, popped: false, popTime: 0, bobPhase: 1.0, bobSpeedX: 0.6, bobSpeedY: 0.4, bobRadiusX: 2, bobRadiusY: 3, popScale: 1 },
+    { label: "↓", keys: ["ArrowDown", "s"], originX: 0, originY: 0, popped: false, popTime: 0, bobPhase: 2.0, bobSpeedX: 0.5, bobSpeedY: 0.6, bobRadiusX: 3, bobRadiusY: 2, popScale: 1 },
+    { label: "→", keys: ["ArrowRight", "d"], originX: 1.1, originY: 0, popped: false, popTime: 0, bobPhase: 3.0, bobSpeedX: 0.4, bobSpeedY: 0.7, bobRadiusX: 2, bobRadiusY: 3, popScale: 1 },
+    // U and R spaced out below
+    { label: "U", keys: ["u"], originX: -1.1, originY: 2.2, popped: false, popTime: 0, bobPhase: 4.0, bobSpeedX: 0.6, bobSpeedY: 0.5, bobRadiusX: 2, bobRadiusY: 2, popScale: 1 },
+    { label: "R", keys: ["r"], originX: 1.1, originY: 2.2, popped: false, popTime: 0, bobPhase: 5.0, bobSpeedX: 0.5, bobSpeedY: 0.5, bobRadiusX: 3, bobRadiusY: 2, popScale: 1 },
+  ];
+}
+
 export const state = {
+  gamePhase: "controls" as "controls" | "title" | "gameplay",
+  tutorialKeys: makeTutorialKeys(),
+  titleTime: 0, // time spent in title phase
   level: 0,
   entities,
   camera: Camera.create(),
