@@ -90,6 +90,11 @@ function prepLevel(index: number) {
     if (entity === "wall") walls.add(`${x},${y}`);
     if (entity === "player") playerStart = { x, y };
   }
+  // Draw floors under every wall
+  for (const key of walls) {
+    const [wx, wy] = key.split(",").map(Number);
+    createEntity({ type: "floor", x: wx!, y: wy!, w: 1, h: 1, z: -1 });
+  }
   if (playerStart) {
     const MAX_FLOOD = 500;
     const visited = new Set<string>();
@@ -654,7 +659,7 @@ export function draw(state: State, ctx: CanvasRenderingContext2D) {
     // Build set of wall/glass neighbor positions for auto-tiling
     const wallNeighborSet = new Set<string>();
     for (const e of state.entities) {
-      if (e.type === "wall" || (e.type === "glass" && e.glassState !== 2)) {
+      if (e.type === "wall" || e.type === "glass") {
         wallNeighborSet.add(`${e.x},${e.y}`);
       }
     }

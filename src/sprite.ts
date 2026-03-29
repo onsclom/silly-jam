@@ -125,6 +125,91 @@ const autoTileMap: Record<number, { row: number; index: number }> = {
   0b0101: { row: 1, index: 9 },  // top + bottom
 };
 
+// 9-patch compositing for 3- and 4-neighbor tiles.
+// Each quadrant's appearance depends on 2 adjacent neighbors.
+// We source each quadrant from an existing tile that has the matching neighbor pair.
+
+// For a given quadrant, find which existing tile has the same 2-neighbor state
+// Top-left quadrant depends on: top & left
+// Top-right quadrant depends on: top & right
+// Bottom-left quadrant depends on: bottom & left
+// Bottom-right quadrant depends on: bottom & right
+function getQuadrantSource(mask: number): [
+  { row: number; index: number }, // top-left
+  { row: number; index: number }, // top-right
+  { row: number; index: number }, // bottom-left
+  { row: number; index: number }, // bottom-right
+] {
+  const hasTop = (mask & 1) !== 0;
+  const hasRight = (mask & 2) !== 0;
+  const hasBottom = (mask & 4) !== 0;
+  const hasLeft = (mask & 8) !== 0;
+
+  // Build a sub-mask for each quadrant using only its 2 relevant neighbors
+  const tlMask = (hasTop ? 1 : 0) | (hasLeft ? 8 : 0);
+  const trMask = (hasTop ? 1 : 0) | (hasRight ? 2 : 0);
+  const blMask = (hasBottom ? 4 : 0) | (hasLeft ? 8 : 0);
+  const brMask = (hasBottom ? 4 : 0) | (hasRight ? 2 : 0);
+
+  return [
+    autoTileMap[tlMask]!,
+    autoTileMap[trMask]!,
+    autoTileMap[blMask]!,
+    autoTileMap[brMask]!,
+  ];
+}
+
+// Pre-baked canvases for composite tiles (3- and 4-neighbor cases)
+const compositeTiles: Record<number, HTMLCanvasElement> = {};
+const compositeShadowTiles: Record<number, HTMLCanvasElement> = {};
+const compositeMasks = [0b0111, 0b1011, 0b1101, 0b1110, 0b1111];
+
+function bakeCompositeTiles() {
+  const fw = sheet.frameWidthPx;
+  const fh = sheet.frameHeightPx;
+  const halfW = Math.ceil(fw / 2);
+  const halfH = Math.ceil(fh / 2);
+
+  for (const mask of compositeMasks) {
+    const quadrants = getQuadrantSource(mask);
+
+    for (const [store, img] of [
+      [compositeTiles, sheet.image] as const,
+      [compositeShadowTiles, sheetShadow!] as const,
+    ]) {
+      const c = document.createElement("canvas");
+      c.width = fw;
+      c.height = fh;
+      const ctx = c.getContext("2d")!;
+
+      // Draw each quadrant from its source tile
+      const positions = [
+        { dx: 0, dy: 0, sx: 0, sy: 0, w: halfW, h: halfH },           // top-left
+        { dx: halfW, dy: 0, sx: halfW, sy: 0, w: fw - halfW, h: halfH }, // top-right
+        { dx: 0, dy: halfH, sx: 0, sy: halfH, w: halfW, h: fh - halfH }, // bottom-left
+        { dx: halfW, dy: halfH, sx: halfW, sy: halfH, w: fw - halfW, h: fh - halfH }, // bottom-right
+      ];
+
+      for (let i = 0; i < 4; i++) {
+        const src = quadrants[i]!;
+        const pos = positions[i]!;
+        const srcX = src.index * fw + pos.sx;
+        const srcY = src.row * fh + pos.sy;
+        ctx.drawImage(img, srcX, srcY, pos.w, pos.h, pos.dx, pos.dy, pos.w, pos.h);
+      }
+
+      store[mask] = c;
+    }
+  }
+}
+
+sheet.image.addEventListener("load", () => {
+  // sheetShadow is baked in the existing load handler, but we need both ready
+  // so we re-bake shadow here and then bake composites
+  if (!sheetShadow) sheetShadow = bakeShadow(sheet.image);
+  bakeCompositeTiles();
+});
+
 export function drawWall(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -137,6 +222,13 @@ export function drawWall(
   if (neighborMask >= 0 && neighborMask in autoTileMap) {
     const tile = autoTileMap[neighborMask]!;
     drawSprite(ctx, tile.index, x - 0.5, y - 0.5, tileScale, shadow, tile.row);
+  } else if (neighborMask >= 0 && neighborMask in compositeTiles) {
+    const store = shadow ? compositeShadowTiles : compositeTiles;
+    const canvas = store[neighborMask];
+    if (canvas) {
+      const drawSize = sheet.frameWidthPx * tileScale;
+      ctx.drawImage(canvas, 0, 0, canvas.width, canvas.height, x - 0.5, y - 0.5, drawSize, drawSize);
+    }
   } else {
     const wallIndexes = [0, 1, 2, 3];
     const spriteIndex = wallIndexes[i % wallIndexes.length]!;
