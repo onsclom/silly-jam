@@ -420,52 +420,58 @@ export function draw(state: State, ctx: CanvasRenderingContext2D) {
       .filter((e) => e.type !== "none")
       .sort((a, b) => a.z - b.z);
     for (const entity of zAxisSortedEntities) {
-      if (entity.type === "player") {
-        ctx.strokeRect(
-          entity.x - entity.animatedW / 2,
-          entity.y - entity.animatedH / 2,
-          entity.animatedW,
-          entity.animatedH,
-        );
-      }
-
-      if (entity.type === "floor") {
-        ctx.fillStyle = (entity.x + entity.y) % 2 === 0 ? "#b0b0b0" : "#9a9a9a";
-        ctx.fillRect(entity.x - 0.5, entity.y - 0.5, 1.01, 1.01);
-      }
-      if (entity.type === "wall") {
-        drawWall(ctx, entity.x, entity.y, entity.index);
-      }
-      if (entity.type === "burger") {
-        drawBurger(ctx, entity.x, entity.y);
-      }
-      if (entity.type === "toilet") {
-        const isWallToLeft = state.entities.some(
-          (e) => e.type === "wall" && e.x === entity.x - 1 && e.y === entity.y,
-        );
-        if (isWallToLeft) {
-          ctx.save();
-          ctx.translate(entity.x, entity.y);
-          ctx.scale(-1, 1);
-          drawToilet(ctx, 0, 0, false);
-          ctx.restore();
-        } else {
-          drawToilet(ctx, entity.x, entity.y, false);
+      switch (entity.type) {
+        case "player": {
+          ctx.strokeRect(
+            entity.x - entity.animatedW / 2,
+            entity.y - entity.animatedH / 2,
+            entity.animatedW,
+            entity.animatedH,
+          );
+          // todo:
+          // - facing left or right
+          // - squished effect
+          // - idle vs walk vs eat + grow animation
+          // - maybe a hand-drawn outline so rectangle is still visible?
+          drawPlayer(ctx, entity.x, entity.y);
+          break;
         }
-      }
-      if (entity.type === "poop") {
-        drawToilet(ctx, entity.x, entity.y, true);
-      }
-      if (entity.type === "plate") {
-        drawCrumbs(ctx, entity.x, entity.y, entity.index);
-      }
-      if (entity.type === "player") {
-        // todo:
-        // - facing left or right
-        // - squished effect
-        // - idle vs walk vs eat + grow animation
-        // - maybe a hand-drawn outline so rectangle is still visible?
-        drawPlayer(ctx, entity.x, entity.y);
+        case "floor": {
+          ctx.fillStyle =
+            (entity.x + entity.y) % 2 === 0 ? "#b0b0b0" : "#9a9a9a";
+          ctx.fillRect(entity.x - 0.5, entity.y - 0.5, 1.01, 1.01);
+          break;
+        }
+        case "wall": {
+          drawWall(ctx, entity.x, entity.y, entity.index);
+          break;
+        }
+        case "burger": {
+          drawBurger(ctx, entity.x, entity.y);
+          break;
+        }
+        case "toilet":
+        case "poop": {
+          const isStinky = entity.type === "poop";
+          const isWallToLeft = state.entities.some(
+            (e) =>
+              e.type === "wall" && e.x === entity.x - 1 && e.y === entity.y,
+          );
+          if (isWallToLeft) {
+            ctx.save();
+            ctx.translate(entity.x, entity.y);
+            ctx.scale(-1, 1);
+            drawToilet(ctx, 0, 0, isStinky);
+            ctx.restore();
+          } else {
+            drawToilet(ctx, entity.x, entity.y, isStinky);
+          }
+          break;
+        }
+        case "plate": {
+          drawCrumbs(ctx, entity.x, entity.y, entity.index);
+          break;
+        }
       }
     }
   });
