@@ -39,7 +39,7 @@ import {
 import { state } from "./state";
 import * as Renderer from "./renderer";
 
-const DEBUG = true;
+const DEBUG = false;
 const SHADOWS_ENABLED = true; // @seb in case you don't like these
 const SHADOW_OFFSET = 0.12;
 const MAX_UNDO_STACK = 128;
@@ -172,7 +172,9 @@ function prepLevel(index: number) {
     shuffleInPlace(wallTiles);
     const { x, y } = wallTiles[0]!;
     const artworkSpriteIndex =
-      artworkSpriteIndexes[Math.floor(Math.random() * artworkSpriteIndexes.length)]!;
+      artworkSpriteIndexes[
+        Math.floor(Math.random() * artworkSpriteIndexes.length)
+      ]!;
     createEntity({
       type: "artwork",
       x,
@@ -806,7 +808,12 @@ export function draw(state: State, ctx: CanvasRenderingContext2D) {
     }
 
     for (const entity of state.entities) {
-      if (entity.type === "none" || entity.type === "floor" || entity.type === "wall") continue;
+      if (
+        entity.type === "none" ||
+        entity.type === "floor" ||
+        entity.type === "wall"
+      )
+        continue;
 
       // helper to submit a shadow version of a draw call
       const submitShadow = !SHADOWS_ENABLED
