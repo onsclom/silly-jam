@@ -630,23 +630,13 @@ export function draw(state: State, ctx: CanvasRenderingContext2D) {
 
   if (state.undoTextOpacity > 0.01) {
     ctx.globalAlpha = state.undoTextOpacity;
-    ctx.fillStyle = "white";
     ctx.font = "bold 48px handwriting";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.shadowColor = "black";
-    ctx.shadowBlur = 0;
-    for (const [dx, dy] of [
-      [-2, 0],
-      [2, 0],
-      [0, -2],
-      [0, 2],
-    ]) {
-      ctx.shadowOffsetX = dx!;
-      ctx.shadowOffsetY = dy!;
-      ctx.fillText("UNDO", width / 2, height / 2);
-    }
-    ctx.shadowColor = "transparent";
+    ctx.fillStyle = "white";
+    ctx.fillText("UNDO", width / 2 + 2, height / 2 + 2);
+    ctx.fillStyle = "gray";
+    ctx.fillText("UNDO", width / 2, height / 2);
     ctx.globalAlpha = 1;
   }
 

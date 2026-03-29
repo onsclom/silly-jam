@@ -232,7 +232,8 @@ export function drawPlayer(
   ctx.restore();
 }
 
-// todo probably pre-bake these or at least just once per level
+// todo probably pre-bake these multi-tile subtile things
+// or at least just compute once per level instead of every draw
 export function drawFloor(ctx: CanvasRenderingContext2D, entity: Entity) {
   const { x, y, index } = entity;
   const floorSubdivisionCount = 4;
