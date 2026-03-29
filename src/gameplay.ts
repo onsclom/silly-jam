@@ -379,7 +379,14 @@ export function draw(state: State, ctx: CanvasRenderingContext2D) {
   // const { width, height } = ctx.canvas.getBoundingClientRect();
   // const center = { x: width / 2, y: height / 2 };
 
-  ctx.fillStyle = "#0b0d1a";
+  // Blue sky gradient background
+  const { width, height } = ctx.canvas.getBoundingClientRect();
+  const skyGradient = ctx.createLinearGradient(0, 0, 0, ctx.canvas.height);
+  skyGradient.addColorStop(0, "#3a7bb8");
+  skyGradient.addColorStop(1, "#6aaccc");
+  ctx.fillStyle = skyGradient;
+  ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
   ctx.strokeStyle = "white";
   ctx.lineWidth = 0.02;
 
@@ -433,7 +440,7 @@ export function draw(state: State, ctx: CanvasRenderingContext2D) {
         ctx.fillText(emoji, entity.x, entity.y);
       }
       if (entity.type === "floor") {
-        ctx.fillStyle = (entity.x + entity.y) % 2 === 0 ? "#222" : "#111";
+        ctx.fillStyle = (entity.x + entity.y) % 2 === 0 ? "#b0b0b0" : "#9a9a9a";
         ctx.fillRect(entity.x - 0.5, entity.y - 0.5, 1.01, 1.01);
       }
       if (entity.type === "wall") {
