@@ -101,13 +101,15 @@ export function drawCrumbs(
 }
 
 // todo: figure out eating frames / timing
-export function drawGuy(
+export function drawPlayer(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
-  size: "small" | "medium" | "large" | "xl",
+  // size: "small" | "medium" | "large" | "xl",
+  // isSquished: boolean
+  // state: "idle" | "eat" | "walk"
 ) {
   // only for the "small" size:
-  const index = 10;
+  const index = 12;
   drawSprite(ctx, index, x - 0.5, y - 0.5, 1 / sheet.frameWidthPx);
 }

@@ -1,10 +1,4 @@
-import {
-  State,
-  Entity,
-  clearAllEntities,
-  createEntity,
-  removeEntity,
-} from "./state";
+import { State, clearAllEntities, createEntity, removeEntity } from "./state";
 import { chompSound, sfx } from "./audio";
 import { justMoved, justPressedRestart, justPressedUndo } from "./inputs";
 import * as Camera from "./camera";
@@ -14,7 +8,7 @@ import { levels } from "./levels/levels";
 import {
   drawBurger,
   drawCrumbs,
-  drawSprite,
+  drawPlayer,
   drawToilet,
   drawWall,
 } from "./sprite";
@@ -212,6 +206,7 @@ export function update(state: State, dt: number) {
       }
       if (hitWall) {
         sfx("hitWall").play({ detune: Math.random() * 1000 - 500 });
+        // idea: shake strength based on player size? (todo)
         const shakeStrength = 0.4;
         state.shakeX = -lastVx * shakeStrength;
         state.shakeY = -lastVy * shakeStrength;
@@ -434,13 +429,6 @@ export function draw(state: State, ctx: CanvasRenderingContext2D) {
         );
       }
 
-      const debugEmojis = {
-        player: "👤",
-      };
-      const emoji = debugEmojis[entity.type as keyof typeof debugEmojis];
-      if (emoji) {
-        ctx.fillText(emoji, entity.x, entity.y);
-      }
       if (entity.type === "floor") {
         ctx.fillStyle = (entity.x + entity.y) % 2 === 0 ? "#b0b0b0" : "#9a9a9a";
         ctx.fillRect(entity.x - 0.5, entity.y - 0.5, 1.01, 1.01);
@@ -452,13 +440,32 @@ export function draw(state: State, ctx: CanvasRenderingContext2D) {
         drawBurger(ctx, entity.x, entity.y);
       }
       if (entity.type === "toilet") {
-        drawToilet(ctx, entity.x, entity.y, false);
+        const isWallToLeft = state.entities.some(
+          (e) => e.type === "wall" && e.x === entity.x - 1 && e.y === entity.y,
+        );
+        if (isWallToLeft) {
+          ctx.save();
+          ctx.translate(entity.x, entity.y);
+          ctx.scale(-1, 1);
+          drawToilet(ctx, 0, 0, false);
+          ctx.restore();
+        } else {
+          drawToilet(ctx, entity.x, entity.y, false);
+        }
       }
       if (entity.type === "poop") {
         drawToilet(ctx, entity.x, entity.y, true);
       }
       if (entity.type === "plate") {
         drawCrumbs(ctx, entity.x, entity.y, entity.index);
+      }
+      if (entity.type === "player") {
+        // todo:
+        // - facing left or right
+        // - squished effect
+        // - idle vs walk vs eat + grow animation
+        // - maybe a hand-drawn outline so rectangle is still visible?
+        drawPlayer(ctx, entity.x, entity.y);
       }
     }
   });
