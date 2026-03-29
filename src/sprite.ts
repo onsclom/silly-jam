@@ -369,6 +369,24 @@ export function drawCrumbs(
   drawSprite(ctx, index, x - 0.5, y - 0.5, 1 / sheet.frameWidthPx, shadow);
 }
 
+export function drawArtwork(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  artworkSpriteIndex: number,
+  shadow = false,
+) {
+  drawSprite(
+    ctx,
+    artworkSpriteIndex,
+    x - 0.5,
+    y - 0.5,
+    1.01 / sheet.frameWidthPx,
+    shadow,
+    1,
+  );
+}
+
 const frames = {
   small: {
     idle: playerFrames.filter(

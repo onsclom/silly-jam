@@ -18,6 +18,7 @@ import { isColliding, expDecay, clamp } from "./util";
 import { parseLevel } from "./parser";
 import { levels } from "./levels/levels";
 import {
+  drawArtwork,
   burgerBoySheet,
   drawBurger,
   drawBurgerBoyFrame,
@@ -43,6 +44,17 @@ const WIN_SCREEN_INPUT_DELAY = 0.5; // prevents accidently startiong next level 
 const TRANSITION_COVER_TIME = 0.5;
 const TRANSITION_UNCOVER_TIME = 0.5;
 const BURGER_TILE_SIZE = 70; // px on screen
+
+function randomIntInclusive(min: number, max: number) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function shuffleInPlace<T>(items: T[]) {
+  for (let i = items.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [items[i], items[j]] = [items[j]!, items[i]!];
+  }
+}
 
 function startTransition(level: number) {
   state.transitionTime = -TRANSITION_COVER_TIME;
@@ -143,6 +155,35 @@ function prepLevel(index: number) {
       flipX: flipX ?? false,
     });
   }
+
+  const wallTiles = parsed.entities
+    .filter(({ entity }) => entity === "wall")
+    .map(({ x, y }) => ({ x, y }));
+  if (wallTiles.length > 0) {
+    const artworkSpriteIndexes = [10, 11, 12, 14] as const;
+    shuffleInPlace(wallTiles);
+    const artworkCount = Math.min(
+      wallTiles.length,
+      artworkSpriteIndexes.length,
+      randomIntInclusive(1, 3),
+    );
+    const selectedWalls = wallTiles.slice(0, artworkCount);
+    const artworkIndexes = [...artworkSpriteIndexes];
+    shuffleInPlace(artworkIndexes);
+    for (let i = 0; i < selectedWalls.length; i++) {
+      const { x, y } = selectedWalls[i]!;
+      createEntity({
+        type: "artwork",
+        x,
+        y,
+        w: 1,
+        h: 1,
+        z: 1,
+        artworkSpriteIndex: artworkIndexes[i]!,
+      });
+    }
+  }
+
   return parsed;
 }
 
@@ -805,6 +846,11 @@ export function draw(state: State, ctx: CanvasRenderingContext2D) {
           if (wallNeighborSet.has(`${x - 1},${y}`)) mask |= 8;
           submitShadow((ctx) => drawWall(ctx, x, y, i, true, mask));
           Renderer.submit(z, (ctx) => drawWall(ctx, x, y, i, false, mask));
+          break;
+        }
+        case "artwork": {
+          const { x, y, z, artworkSpriteIndex } = entity;
+          Renderer.submit(z, (ctx) => drawArtwork(ctx, x, y, artworkSpriteIndex));
           break;
         }
         case "burger": {
