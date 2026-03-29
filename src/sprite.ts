@@ -209,8 +209,7 @@ export function drawPlayer(
   const blockedGrowScaleAmount = 0.07;
   const blockedOverlayAlphaMin = 0.16;
   const blockedOverlayAlphaMax = 0.82;
-  const blockedIconScaleMin = 1;
-  const blockedIconScaleMax = 1.15;
+  const blockedIconScaleAmount = 0.15;
   const blockedSettleFloor = 0.08;
 
   const frame = usingEat
@@ -226,28 +225,29 @@ export function drawPlayer(
   const drawH = entity.animatedH;
   const moving = entity.vx !== 0 || entity.vy !== 0;
   const wobbleLeft = Math.floor(state.elapsedSeconds * 3) % 2 === 0;
-  const blockedCycleT = state.elapsedSeconds % blockedCycleSeconds;
   let blockedAttempt = 0;
-  if (blockedCycleT > blockedWaitSeconds) {
-    const pushEnd = blockedWaitSeconds + blockedPushSeconds;
-    const failEnd = pushEnd + blockedFailSeconds;
-    if (blockedCycleT <= pushEnd) {
-      const t = (blockedCycleT - blockedWaitSeconds) / blockedPushSeconds;
-      blockedAttempt = easing.easeOutCubic(t);
-    } else if (blockedCycleT <= failEnd) {
-      const t = (blockedCycleT - pushEnd) / blockedFailSeconds;
-      blockedAttempt =
-        (1 - easing.easeInOutSine(t)) * (1 - blockedSettleFloor) +
-        blockedSettleFloor;
-    } else {
-      const t = (blockedCycleT - failEnd) / blockedSettleSeconds;
-      blockedAttempt = (1 - easing.easeOutSine(t)) * blockedSettleFloor;
+  if (showBlockedGrowFx) {
+    const blockedCycleT = state.elapsedSeconds % blockedCycleSeconds;
+    if (blockedCycleT > blockedWaitSeconds) {
+      const pushEnd = blockedWaitSeconds + blockedPushSeconds;
+      const failEnd = pushEnd + blockedFailSeconds;
+      if (blockedCycleT <= pushEnd) {
+        const t = (blockedCycleT - blockedWaitSeconds) / blockedPushSeconds;
+        blockedAttempt = easing.easeOutCubic(t);
+      } else if (blockedCycleT <= failEnd) {
+        const t = (blockedCycleT - pushEnd) / blockedFailSeconds;
+        blockedAttempt =
+          (1 - easing.easeInOutSine(t)) * (1 - blockedSettleFloor) +
+          blockedSettleFloor;
+      } else {
+        const t = (blockedCycleT - failEnd) / blockedSettleSeconds;
+        blockedAttempt = (1 - easing.easeOutSine(t)) * blockedSettleFloor;
+      }
     }
   }
   // mimic the squish feel with an exponential-style curve
   const blockedSquishEase = 1 - Math.exp(-8 * blockedAttempt);
-  const blockedGrowScale =
-    1 + (showBlockedGrowFx ? blockedSquishEase * blockedGrowScaleAmount : 0);
+  const blockedGrowScale = 1 + blockedSquishEase * blockedGrowScaleAmount;
 
   ctx.save();
   ctx.translate(entity.x, entity.y);
@@ -287,27 +287,20 @@ export function drawPlayer(
     ctx.restore();
 
     const blockedIconPulse = easing.easeInOutSine(blockedAttempt);
-    const blockedIconScale =
-      blockedIconScaleMin +
-      blockedIconPulse * (blockedIconScaleMax - blockedIconScaleMin);
+    const blockedIconScale = 1 + blockedIconPulse * blockedIconScaleAmount;
     const blockedIconDrawW = drawW * blockedIconScale;
     const blockedIconDrawH = drawH * blockedIconScale;
-    const blockedIconX = -blockedIconDrawW / 2;
-    const blockedIconY = -blockedIconDrawH / 2;
-    ctx.save();
-    const blockedIconSourceX = 19 * sheet.frameWidthPx;
     ctx.drawImage(
       sheet.image,
-      blockedIconSourceX,
+      19 * sheet.frameWidthPx,
       0,
       sheet.frameWidthPx,
       sheet.frameHeightPx,
-      blockedIconX,
-      blockedIconY,
+      -blockedIconDrawW / 2,
+      -blockedIconDrawH / 2,
       blockedIconDrawW,
       blockedIconDrawH,
     );
-    ctx.restore();
   }
 
   ctx.restore();
