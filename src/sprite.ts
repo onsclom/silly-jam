@@ -1,6 +1,7 @@
 import sprite from "./assets/images/sprite.png";
+import playerSprite from "./assets/images/player-sprite.png";
 import playerFrames from "./assets/images/player-sprite.frames.json";
-import { state } from "./state";
+import { Entity, state } from "./state";
 
 type SpriteSheet = {
   image: HTMLImageElement;
@@ -17,6 +18,8 @@ const sheet: SpriteSheet = {
 };
 
 sheet.image.src = sprite;
+const playerSheetImage = new Image();
+playerSheetImage.src = playerSprite;
 
 export function drawSprite(
   ctx: CanvasRenderingContext2D,
@@ -139,15 +142,43 @@ const frames = {
   },
 };
 
-export function drawPlayer(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  // size: "small" | "medium" | "large" | "xl",
-  // isSquished: boolean
-  // state: "idle" | "eat" | "walk"
-) {
-  // only for the "small" size:
-  const index = 12;
-  drawSprite(ctx, index, x - 0.5, y - 0.5, 1 / sheet.frameWidthPx);
+export function drawPlayer(ctx: CanvasRenderingContext2D, entity: Entity) {
+  const sizeKeys = ["small", "medium", "large", "xl", "xxl"] as const;
+  const sizeStep = 0.5;
+  const sizeIndex = Math.max(
+    0,
+    Math.min(sizeKeys.length - 1, Math.round((entity.goalW - 1) / sizeStep)),
+  );
+  const size = sizeKeys[sizeIndex]!;
+  const bucket = frames[size];
+
+  const eatFrames = bucket.eat;
+  const idleFrames = bucket.idle;
+  const usingEat = entity.eatProgress < 1 && eatFrames.length > 0;
+
+  const frame = usingEat
+    ? eatFrames[
+        Math.min(
+          eatFrames.length - 1,
+          Math.floor(entity.eatProgress * eatFrames.length),
+        )
+      ]!
+    : idleFrames[Math.floor(state.elapsedSeconds * 2) % idleFrames.length]!;
+
+  const drawW = entity.animatedW;
+  const drawH = entity.animatedH;
+  const drawX = entity.x - drawW / 2;
+  const drawY = entity.y + entity.animatedH / 2 - drawH;
+
+  ctx.drawImage(
+    playerSheetImage,
+    frame.x,
+    frame.y,
+    frame.w,
+    frame.h,
+    drawX,
+    drawY,
+    drawW,
+    drawH,
+  );
 }
