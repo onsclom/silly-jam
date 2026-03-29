@@ -57,14 +57,20 @@ export function drawWall(
   drawSprite(ctx, spriteIndex, x - 0.5, y - 0.5, tileScale);
 }
 
-// todo: slow 2-frame wobble animation in code
 export function drawBurger(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
 ) {
+  const rotate = Math.floor(state.elapsedSeconds * 3) % 2 === 0;
   const burgerIndex = 8;
-  drawSprite(ctx, burgerIndex, x - 0.5, y - 0.5, 1 / sheet.frameWidthPx);
+  const tileScale = 1 / sheet.frameWidthPx;
+
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(rotate ? Math.PI / 20 : -Math.PI / 20);
+  drawSprite(ctx, burgerIndex, -0.5, -0.5, tileScale);
+  ctx.restore();
 }
 
 export function drawToilet(
