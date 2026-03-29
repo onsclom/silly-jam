@@ -5,6 +5,7 @@ import {
   glassShatterSound,
   hitWallSound,
   sfx,
+  tutorialKeySound,
   winSound,
 } from "./audio";
 import {
@@ -63,6 +64,13 @@ function startTransition(level: number) {
 }
 
 function updateControlsTutorial(state: State, dt: number) {
+  for (const pressedKey of state.justPressed) {
+    const isTutorialKey = state.tutorialKeys.some((key) =>
+      key.keys.includes(pressedKey),
+    );
+    if (isTutorialKey) tutorialKeySound();
+  }
+
   for (const key of state.tutorialKeys) {
     if (!key.popped) {
       const wasPressed = state.justPressed.some((k) => key.keys.includes(k));

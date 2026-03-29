@@ -129,6 +129,25 @@ export function hitWallSound(player: Entity) {
   });
 }
 
+export function tutorialKeySound() {
+  const grunts = [
+    "grunt1",
+    "grunt2",
+    "grunt3",
+    "grunt4",
+    "grunt5",
+    "grunt6",
+    "grunt7",
+    "grunt8",
+  ] as const;
+  const sound = grunts[Math.floor(Math.random() * grunts.length)]!;
+  sfx(sound).play();
+  sfx("hitWall").play({
+    detune: Math.random() * 300 - 150,
+    volume: 0.3,
+  });
+}
+
 /*
   in spud demo mode (spud.isDemoMode === true), audio methods are no-ops.
   that means you can always call sfx("...").play() or music.play() without
