@@ -111,7 +111,14 @@ export function drawToilet(
 ) {
   const toiletIndex = 9;
   if (!stinky) {
-    drawSprite(ctx, toiletIndex, x - 0.5, y - 0.5, 1 / sheet.frameWidthPx, shadow);
+    drawSprite(
+      ctx,
+      toiletIndex,
+      x - 0.5,
+      y - 0.5,
+      1 / sheet.frameWidthPx,
+      shadow,
+    );
     return;
   }
   const indexModifier = Math.floor(state.elapsedSeconds) % 2 === 0 ? 1 : 2;
@@ -169,7 +176,11 @@ const frames = {
   },
 };
 
-export function drawPlayer(ctx: CanvasRenderingContext2D, entity: Entity, shadow = false) {
+export function drawPlayer(
+  ctx: CanvasRenderingContext2D,
+  entity: Entity,
+  shadow = false,
+) {
   const sizeKeys = ["small", "medium", "large", "xl", "xxl"] as const;
   const sizeStep = 0.5;
   const sizeIndex = Math.max(
@@ -221,8 +232,10 @@ export function drawPlayer(ctx: CanvasRenderingContext2D, entity: Entity, shadow
   ctx.restore();
 }
 
+// todo probably pre-bake these or at least just once per level
 export function drawFloor(ctx: CanvasRenderingContext2D, entity: Entity) {
   const { x, y, index } = entity;
+  const floorSubdivisionCount = 4;
   ctx.fillStyle = "#f0f0f2";
   ctx.fillRect(x - 0.5, y - 0.5, 1.01, 1.01);
   const opacities = [0.3, 0.4, 0.2, 0.6, 0.35, 0.4, 0.3, 0.4, 0.25, 0.6, 0.35];
@@ -233,12 +246,31 @@ export function drawFloor(ctx: CanvasRenderingContext2D, entity: Entity) {
     [1, -1],
   ] as const;
   const tileIndexes = [12, 13];
-  const rotation = rotations[index % rotations.length]!;
-  const i = tileIndexes[index % tileIndexes.length]!;
-  ctx.save();
-  ctx.globalAlpha = opacities[index % opacities.length]!;
-  ctx.translate(x, y);
-  ctx.scale(rotation[0], rotation[1]);
-  drawSprite(ctx, i, -0.5, -0.5, 1 / sheet.frameWidthPx);
-  ctx.restore();
+  const subtileSize = 1 / floorSubdivisionCount;
+
+  for (let row = 0; row < floorSubdivisionCount; row += 1) {
+    for (let col = 0; col < floorSubdivisionCount; col += 1) {
+      const virtualIndex =
+        index * floorSubdivisionCount * floorSubdivisionCount +
+        row * floorSubdivisionCount +
+        col;
+      const rotation = rotations[virtualIndex % rotations.length]!;
+      const i = tileIndexes[virtualIndex % tileIndexes.length]!;
+      const offsetX = -0.5 + (col + 0.5) * subtileSize;
+      const offsetY = -0.5 + (row + 0.5) * subtileSize;
+
+      ctx.save();
+      ctx.globalAlpha = opacities[virtualIndex % opacities.length]!;
+      ctx.translate(x + offsetX, y + offsetY);
+      ctx.scale(rotation[0], rotation[1]);
+      drawSprite(
+        ctx,
+        i,
+        -subtileSize / 2,
+        -subtileSize / 2,
+        subtileSize / sheet.frameWidthPx,
+      );
+      ctx.restore();
+    }
+  }
 }
