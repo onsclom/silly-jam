@@ -22,6 +22,7 @@ export type Entity = {
   animatedW: number;
   animatedH: number;
   eatProgress: number; // 0..1 where 1 means not currently eating
+  flipX: boolean;
   vx: number;
   vy: number;
   z: number; // z-axis for drawing
@@ -40,6 +41,7 @@ function createEmptyEntity(index: number): Entity {
     animatedW: 0,
     animatedH: 0,
     eatProgress: 1,
+    flipX: false,
     vx: 0,
     vy: 0,
     z: 0,

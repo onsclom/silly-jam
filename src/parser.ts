@@ -17,21 +17,29 @@ const EntityType = {
 
 type EntityType = (typeof EntityType)[keyof typeof EntityType];
 
-const entityByChar: Record<string, EntityType> = {
-  "@": "player",
-  "#": "wall",
-  b: "burger",
-  t: "toilet",
+type ParsedEntity = {
+  entity: EntityType;
+  x: number;
+  y: number;
+  flipX?: boolean;
+};
+
+const entityByChar: Record<string, Omit<ParsedEntity, "x" | "y">> = {
+  "@": { entity: "player" },
+  "#": { entity: "wall" },
+  b: { entity: "burger" },
+  t: { entity: "toilet", flipX: false },
+  T: { entity: "toilet", flipX: true },
 };
 
 export function parseLevel(level: string) {
-  const entities = [];
+  const entities: ParsedEntity[] = [];
   const lines = level.split("\n");
   for (const [y, line] of lines.entries()) {
     for (const [x, char] of line.split("").entries()) {
-      const entity = entityByChar[char];
-      if (entity) {
-        entities.push({ entity, x, y });
+      const parsed = entityByChar[char];
+      if (parsed) {
+        entities.push({ ...parsed, x, y });
       }
     }
   }
