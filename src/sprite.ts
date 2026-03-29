@@ -192,3 +192,25 @@ export function drawPlayer(ctx: CanvasRenderingContext2D, entity: Entity) {
   );
   ctx.restore();
 }
+
+export function drawFloor(ctx: CanvasRenderingContext2D, entity: Entity) {
+  const { x, y, index } = entity;
+  ctx.fillStyle = "#f0f0f2";
+  ctx.fillRect(x - 0.5, y - 0.5, 1.01, 1.01);
+  const opacities = [0.3, 0.4, 0.2, 0.6, 0.35, 0.4, 0.3, 0.4, 0.25, 0.6, 0.35];
+  const rotations = [
+    [1, 1],
+    [-1, 1],
+    [-1, -1],
+    [1, -1],
+  ] as const;
+  const tileIndexes = [12, 13];
+  const rotation = rotations[index % rotations.length]!;
+  const i = tileIndexes[index % tileIndexes.length]!;
+  ctx.save();
+  ctx.globalAlpha = opacities[index % opacities.length]!;
+  ctx.translate(x, y);
+  ctx.scale(rotation[0], rotation[1]);
+  drawSprite(ctx, i, -0.5, -0.5, 1 / sheet.frameWidthPx);
+  ctx.restore();
+}
