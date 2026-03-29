@@ -44,7 +44,7 @@ export const levels = [
 #                #
 # @    b         #
 ###############bb#
-#tt #            #
+#t t#            #
 #                #
 #                #
 #       ###b     #
