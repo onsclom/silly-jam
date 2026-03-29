@@ -98,13 +98,24 @@ function prepLevel(index: number) {
   state.undos = 0;
   state.restarts = 0;
 
+  // reset game stats when starting from level 0
+  if (index === 0) {
+    state.gameStats = { time: 0, moves: 0, undos: 0, restarts: 0 };
+  }
+
   // floodfill floor tiles from player start, bounded by walls
+  const isLastLevel = index === levels.length - 1;
   const walls = new Set<string>();
+  const floodBarriers = new Set<string>();
   let playerStart: { x: number; y: number } | null = null;
   for (const { entity, x, y } of parsed.entities) {
     if (entity === "wall") walls.add(`${x},${y}`);
     if (entity === "player") playerStart = { x, y };
+    // on last level, glass also blocks floodfill
+    if (isLastLevel && entity === "glass") floodBarriers.add(`${x},${y}`);
   }
+  // combine walls and any extra barriers for floodfill
+  const floodBlockers = new Set([...walls, ...floodBarriers]);
   // Draw floors under every wall
   for (const key of walls) {
     const [wx, wy] = key.split(",").map(Number);
@@ -127,7 +138,7 @@ function prepLevel(index: number) {
         const nx = x + dx!;
         const ny = y + dy!;
         const key = `${nx},${ny}`;
-        if (!visited.has(key) && !walls.has(key)) {
+        if (!visited.has(key) && !floodBlockers.has(key)) {
           visited.add(key);
           queue.push({ x: nx, y: ny });
         }
@@ -221,6 +232,8 @@ export function update(state: State, dt: number) {
       }
       state.winScreen = false;
       state.winScreenTime = 0;
+      state.gameBeatScreen = false;
+      state.gameBeatScreenTime = 0;
       const textarea = document.querySelector("textarea");
       if (textarea) {
         textarea.value = levels[state.level]!;
@@ -234,6 +247,11 @@ export function update(state: State, dt: number) {
     }
 
     return;
+  }
+
+  if (state.gameBeatScreen) {
+    state.gameBeatScreenTime += dt / 1000;
+    // don't return — let physics keep running so the player flies out
   }
 
   if (state.winScreen) {
@@ -267,21 +285,23 @@ export function update(state: State, dt: number) {
     }
   }
 
-  if (justPressedRestart()) {
-    state.restarts++;
-    startTransition(state.level);
-    return;
-  }
-
-  if (justPressedUndo()) {
-    if (state.undoStack.length > 0) {
-      const snapshot = state.undoStack.pop()!;
-      for (let i = 0; i < state.entities.length; i++) {
-        Object.assign(state.entities[i]!, snapshot[i]!);
-      }
-      state.undoTextOpacity = 1;
-      state.undos++;
+  if (!state.gameBeatScreen) {
+    if (justPressedRestart()) {
+      state.restarts++;
+      startTransition(state.level);
       return;
+    }
+
+    if (justPressedUndo()) {
+      if (state.undoStack.length > 0) {
+        const snapshot = state.undoStack.pop()!;
+        for (let i = 0; i < state.entities.length; i++) {
+          Object.assign(state.entities[i]!, snapshot[i]!);
+        }
+        state.undoTextOpacity = 1;
+        state.undos++;
+        return;
+      }
     }
   }
 
@@ -305,20 +325,21 @@ export function update(state: State, dt: number) {
     }
   }
 
-  for (const player of players) {
-    if (isEveryPlayerDoneMoving) {
-      const moves = [
-        { check: justMoved.left, vx: -1, vy: 0, flipX: true },
-        { check: justMoved.right, vx: 1, vy: 0, flipX: false },
-        { check: justMoved.up, vx: 0, vy: -1 },
-        { check: justMoved.down, vx: 0, vy: 1 },
-      ];
-      const move = moves.find((m) => m.check());
+  if (!state.gameBeatScreen) {
+    for (const player of players) {
+      if (isEveryPlayerDoneMoving) {
+        const moves = [
+          { check: justMoved.left, vx: -1, vy: 0, flipX: true },
+          { check: justMoved.right, vx: 1, vy: 0, flipX: false },
+          { check: justMoved.up, vx: 0, vy: -1 },
+          { check: justMoved.down, vx: 0, vy: 1 },
+        ];
+        const move = moves.find((m) => m.check());
 
-      if (move) {
-        state.pendingUndoSnapshot = structuredClone(state.entities);
-        player.vx = move.vx;
-        player.vy = move.vy;
+        if (move) {
+          state.pendingUndoSnapshot = structuredClone(state.entities);
+          player.vx = move.vx;
+          player.vy = move.vy;
         const targetX = Math.round(player.x) + move.vx;
         const targetY = Math.round(player.y) + move.vy;
         // From rest, pressing into a glass tile ahead: no crack/shatter on that tile this move.
@@ -335,6 +356,7 @@ export function update(state: State, dt: number) {
         state.moves++;
       }
     }
+  }
   }
 
   for (const entity of state.entities) {
@@ -625,7 +647,8 @@ export function update(state: State, dt: number) {
   const playerStillEating = state.entities.some(
     (entity) => entity.type === "player" && entity.eatProgress < 1,
   );
-  if (!hasBurgersLeft && !playerStillEating) {
+  const isLastLevel = state.level === levels.length - 1;
+  if (!hasBurgersLeft && !playerStillEating && !isLastLevel) {
     state.winScreen = true;
     state.winScreenTime = 0;
     state.winStats = {
@@ -634,7 +657,55 @@ export function update(state: State, dt: number) {
       undos: state.undos,
       restarts: state.restarts,
     };
+    state.gameStats.time += state.levelTime;
+    state.gameStats.moves += state.moves;
+    state.gameStats.undos += state.undos;
+    state.gameStats.restarts += state.restarts;
     winSound();
+  }
+
+  // last level: all glass shattered = beat the game
+  if (isLastLevel && !state.gameBeatScreen) {
+    const hasUnshatteredGlass = state.entities.some(
+      (e) => e.type === "glass" && e.glassState !== 2,
+    );
+    if (!hasUnshatteredGlass) {
+      state.gameBeatScreen = true;
+      state.gameBeatScreenTime = 0;
+      state.gameStats.time += state.levelTime;
+      state.gameStats.moves += state.moves;
+      state.gameStats.undos += state.undos;
+      state.gameStats.restarts += state.restarts;
+      winSound();
+    }
+  }
+
+  // last level: continuously spawn burgers ahead of the player for fun
+  if (state.gameBeatScreen) {
+    for (const player of state.entities.filter((e) => e.type === "player")) {
+      if (player.vx !== 0 || player.vy !== 0) {
+        const spawnDist = player.w / 2 + 1.5;
+        const spawnX = player.x + player.vx * spawnDist;
+        const spawnY = player.y + player.vy * spawnDist;
+        // only spawn if no burger already nearby
+        const hasBurgerNear = state.entities.some(
+          (e) =>
+            e.type === "burger" &&
+            Math.abs(e.x - spawnX) < 1 &&
+            Math.abs(e.y - spawnY) < 1,
+        );
+        if (!hasBurgerNear) {
+          createEntity({
+            type: "burger",
+            x: spawnX,
+            y: spawnY,
+            w: 1,
+            h: 1,
+            z: 0,
+          });
+        }
+      }
+    }
   }
 
   state.shakeX = expDecay(state.shakeX, 0, 20, dt);
@@ -688,14 +759,30 @@ export function draw(state: State, ctx: CanvasRenderingContext2D) {
   ctx.lineWidth = 0.02;
 
   const margin = 1;
+  const activeEntities = state.entities.filter((e) => e.type !== "none");
+  let minX = Math.min(...activeEntities.map((e) => e.x - e.w / 2));
+  let maxX = Math.max(...activeEntities.map((e) => e.x + e.w / 2));
+  let minY = Math.min(...activeEntities.map((e) => e.y - e.h / 2));
+  let maxY = Math.max(...activeEntities.map((e) => e.y + e.h / 2));
+
+  // on last level, add extra padding around the player so they're not at the edge
+  if (state.gameBeatScreen) {
+    const player = activeEntities.find((e) => e.type === "player");
+    if (player) {
+      const pad = player.w * 2 + 3;
+      minX = Math.min(minX, player.x - pad);
+      maxX = Math.max(maxX, player.x + pad);
+      minY = Math.min(minY, player.y - pad);
+      maxY = Math.max(maxY, player.y + pad);
+    }
+  }
+
   const gameArea = {
-    width:
-      Math.max(...state.entities.map((entity) => entity.x)) + 1 + margin * 2,
-    height:
-      Math.max(...state.entities.map((entity) => entity.y)) + 1 + margin * 2,
+    width: maxX - minX + margin * 2,
+    height: maxY - minY + margin * 2,
   };
-  state.camera.x = (gameArea.width - 1) / 2 - margin + state.shakeX;
-  state.camera.y = (gameArea.height - 1) / 2 - margin + state.shakeY;
+  state.camera.x = (minX + maxX) / 2 + state.shakeX;
+  state.camera.y = (minY + maxY) / 2 + state.shakeY;
   state.camera.zoom = Camera.aspectFitZoom(
     ctx.canvas.getBoundingClientRect(),
     gameArea.width,
@@ -848,13 +935,13 @@ export function draw(state: State, ctx: CanvasRenderingContext2D) {
     ctx.textBaseline = "top";
     ctx.fillStyle = "rgba(0, 0, 0, 0)";
     ctx.fillText(
-      `${state.level + 1} / ${levels.length}`,
+      `${state.level + 1} / ${levels.length - 1}`,
       width - padding + 1,
       padding + 1,
     );
     ctx.fillStyle = "white";
     ctx.fillText(
-      `${state.level + 1} / ${levels.length}`,
+      `${state.level + 1} / ${levels.length - 1}`,
       width - padding,
       padding,
     );
@@ -875,6 +962,10 @@ export function draw(state: State, ctx: CanvasRenderingContext2D) {
 
   if (state.winScreen) {
     drawWinScreen(state, ctx, width, height);
+  }
+
+  if (state.gameBeatScreen) {
+    drawGameBeatScreen(state, ctx, width, height);
   }
 
   if (state.transitionTime !== null) {
@@ -1074,6 +1165,151 @@ function drawWinScreen(
     ctx.textBaseline = "middle";
     ctx.fillText("Press any key to continue", width / 2, height * 0.82);
     ctx.globalAlpha = 1;
+  }
+}
+
+function drawGameBeatScreen(
+  state: State,
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+) {
+  const t = state.gameBeatScreenTime;
+  const minSide = Math.min(width, height);
+  const fontSize = minSide * 0.075;
+
+  const overlayAlpha = Math.min(t * 3, 0.6);
+  ctx.fillStyle = `rgba(0, 0, 0, ${overlayAlpha})`;
+  ctx.fillRect(0, 0, width, height);
+
+  // "YOU BEAT THE GAME!" title
+  const letters = "YOU BEAT THE GAME!".split("");
+  const letterSpacing = fontSize * 0.65;
+  const totalWidth = letters.length * letterSpacing;
+  const startX = width / 2 - totalWidth / 2 + letterSpacing / 2;
+  const titleY = height * 0.25;
+
+  for (let i = 0; i < letters.length; i++) {
+    const letter = letters[i]!;
+    const wavePhase = t * 4 - i * 0.4;
+    const waveY = Math.sin(wavePhase) * fontSize * 0.15;
+    const waveRotation = Math.sin(wavePhase) * 0.15;
+    const hue = (t * 120 + i * 20) % 360;
+
+    const letterDelay = i * 0.04;
+    const scaleT = clamp(0, (t - letterDelay) * 4, 1);
+    const scale =
+      scaleT < 1 ? scaleT * (1 + Math.sin(scaleT * Math.PI) * 0.3) : 1;
+
+    const x = startX + i * letterSpacing;
+    const y = titleY + waveY;
+
+    ctx.save();
+    ctx.font = `bold ${fontSize}px handwriting`;
+    ctx.textAlign = "left";
+    ctx.textBaseline = "alphabetic";
+
+    const metrics = ctx.measureText(letter);
+    const glyphW = metrics.width;
+    const glyphH =
+      metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent;
+    const centerOffsetX = glyphW / 2;
+    const centerOffsetY = metrics.actualBoundingBoxAscent - glyphH / 2;
+
+    ctx.translate(x, y);
+    ctx.rotate(waveRotation);
+    ctx.scale(scale, scale);
+
+    const shadowOffset = fontSize * 0.06;
+    ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+    ctx.fillText(
+      letter,
+      -centerOffsetX + shadowOffset,
+      centerOffsetY + shadowOffset,
+    );
+
+    ctx.fillStyle = `hsl(${hue}, 100%, 60%)`;
+    ctx.fillText(letter, -centerOffsetX, centerOffsetY);
+
+    ctx.restore();
+  }
+
+  // Stats
+  const stats = [
+    { label: "Total Time", value: formatTime(state.gameStats.time) },
+    { label: "Total Moves", value: `${state.gameStats.moves}` },
+    { label: "Total Undos", value: `${state.gameStats.undos}` },
+    { label: "Total Restarts", value: `${state.gameStats.restarts}` },
+  ];
+
+  const statFontSize = fontSize * 0.45;
+  const statLineHeight = statFontSize * 2;
+  const statsStartY = height * 0.42;
+  const statsDelay = 0.5;
+
+  for (let i = 0; i < stats.length; i++) {
+    const stat = stats[i]!;
+    const statT = Math.max(0, t - statsDelay - i * 0.1);
+    if (statT <= 0) continue;
+
+    const scaleT = Math.min(1, statT * 4);
+    const scale =
+      scaleT < 1 ? scaleT * (1 + Math.sin(scaleT * Math.PI) * 0.3) : 1;
+    const y = statsStartY + i * statLineHeight;
+
+    ctx.save();
+    ctx.translate(width / 2, y);
+    ctx.scale(scale, scale);
+
+    ctx.font = `${statFontSize}px handwriting`;
+    ctx.textAlign = "right";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "#d8d8d8";
+    ctx.fillText(stat.label, -statFontSize * 0.3, 0);
+
+    ctx.font = `bold ${statFontSize}px handwriting`;
+    ctx.textAlign = "left";
+
+    const shadowOff = statFontSize * 0.05;
+    ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+    ctx.fillText(stat.value, statFontSize * 0.3 + shadowOff, shadowOff);
+
+    ctx.fillStyle = "white";
+    ctx.fillText(stat.value, statFontSize * 0.3, 0);
+
+    ctx.restore();
+  }
+
+  // "Thanks for playing!" message
+  const thanksDelay = 1.2;
+  const thanksT = Math.max(0, t - thanksDelay);
+  if (thanksT > 0) {
+    const thanksScale = Math.min(1, thanksT * 4);
+    const scale =
+      thanksScale < 1
+        ? thanksScale * (1 + Math.sin(thanksScale * Math.PI) * 0.3)
+        : 1;
+    const thanksFontSize = fontSize * 0.55;
+    const thanksAlpha = 0.7 + Math.sin(t * 2) * 0.3;
+
+    ctx.save();
+    ctx.translate(width / 2, height * 0.78);
+    ctx.scale(scale, scale);
+    ctx.globalAlpha = thanksAlpha;
+    ctx.font = `bold ${thanksFontSize}px handwriting`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    const shadowOff = thanksFontSize * 0.05;
+    ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+    ctx.fillText("Thanks for playing!", shadowOff, shadowOff);
+
+    const thanksHue = (t * 60) % 360;
+    ctx.fillStyle = `hsl(${thanksHue}, 80%, 70%)`;
+    ctx.fillText("Thanks for playing!", 0, 0);
+
+    ctx.globalAlpha = 1;
+    ctx.restore();
   }
 }
 
