@@ -1,5 +1,5 @@
 import { State, clearAllEntities, createEntity, removeEntity } from "./state";
-import { chompSound, sfx } from "./audio";
+import { chompSound, hitWallSound, sfx } from "./audio";
 import {
   justMoved,
   justPressedRestart,
@@ -292,11 +292,7 @@ export function update(state: State, dt: number) {
       }
       if (hitWall) {
         const sizeScale = entity.w ** 1.5;
-        sfx("hitWall").play({
-          detune: Math.random() * 300 - 150,
-          volume: Math.min(2, sizeScale),
-          playbackRate: 1 / entity.w ** 0.5,
-        });
+        hitWallSound(entity);
         const shakeStrength = 0.15 * entity.w ** 1.5;
         state.shakeX = -lastVx * shakeStrength;
         state.shakeY = -lastVy * shakeStrength;

@@ -15,8 +15,17 @@ import gulp1Url from "./assets/audio/gulp1.wav";
 import toilet1Url from "./assets/audio/toilet1.wav";
 import hitWallUrl from "./assets/audio/hit-wall.wav";
 import winUrl from "./assets/audio/win.mp3";
+import grunt1Url from "./assets/audio/grunt1.wav";
+import grunt2Url from "./assets/audio/grunt2.wav";
+import grunt3Url from "./assets/audio/grunt3.wav";
+import grunt4Url from "./assets/audio/grunt4.wav";
+import grunt5Url from "./assets/audio/grunt5.wav";
+import grunt6Url from "./assets/audio/grunt6.wav";
+import grunt7Url from "./assets/audio/grunt7.wav";
+import grunt8Url from "./assets/audio/grunt8.wav";
 
 import menuMusicUrl from "./assets/audio/menu-music.mp3";
+import { Entity } from "./state";
 
 /*
   use createSounds for short, snappy SFX that you want pre-buffered
@@ -34,6 +43,14 @@ export const sfx = audio.createSounds({
   toilet: { url: toilet1Url },
   win: { url: winUrl },
   hitWall: { url: hitWallUrl },
+  grunt1: { url: grunt1Url },
+  grunt2: { url: grunt2Url },
+  grunt3: { url: grunt3Url },
+  grunt4: { url: grunt4Url },
+  grunt5: { url: grunt5Url },
+  grunt6: { url: grunt6Url },
+  grunt7: { url: grunt7Url },
+  grunt8: { url: grunt8Url },
 });
 
 let chompIndex = 0;
@@ -53,6 +70,33 @@ export const menuMusic = audio.createMusic({
   loop: true,
   volume: 0,
 });
+
+// idea if we want the player to make a sound when they kick off of a wall
+// or maybe instead of grunt we use a softer hitWall sound.
+// export function movementSound(player: Entity) {
+//   // todo: speed (+ pitch) up when entity is small. slower/lower when large.
+//   const grunts = ["grunt6", "grunt7", "grunt8"] as const;
+//   const sound = grunts[Math.floor(Math.random() * grunts.length)]!;
+//   sfx(sound).play({
+//     volume: 0.3,
+//   });
+// }
+
+export function hitWallSound(player: Entity) {
+  // const sizeScale = player.w ** 1.5;
+  // todo: speed (+ pitch) up when entity is small. slower/lower when large.
+  const grunts = ["grunt1", "grunt2", "grunt3", "grunt4", "grunt5"] as const;
+  const sound = grunts[Math.floor(Math.random() * grunts.length)]!;
+  sfx(sound).play({
+    detune: 1500 - player.w * 750,
+  });
+  sfx("hitWall").play({
+    // volume: Math.min(2, sizeScale), // todo: find a good range for this.
+    detune: Math.random() * 300 - 150,
+    volume: 0.3,
+    playbackRate: 1 / player.w ** 0.5,
+  });
+}
 
 /*
   in spud demo mode (spud.isDemoMode === true), audio methods are no-ops.
