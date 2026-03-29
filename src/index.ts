@@ -1,10 +1,8 @@
 import { gamepads } from "@spud.gg/api";
 import { draw, update } from "./gameplay";
-import { clearAllEntities, createEntity, state } from "./state";
+import { state } from "./state";
 import { resizeCanvasForDpi } from "./helpers";
 import { clearInputs } from "./inputs";
-import { parseLevel } from "./parser";
-import { levels } from "./levels/levels";
 
 const canvas = document.createElement("canvas");
 document.body.appendChild(canvas);
