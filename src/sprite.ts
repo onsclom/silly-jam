@@ -52,11 +52,12 @@ export function drawSprite(
   y: number,
   scale = 1,
   shadow = false,
+  row = 0,
 ) {
   const img = shadow && sheetShadow ? sheetShadow : sheet.image;
   const frame = frameIndex % sheet.frameCount;
   const sourceX = frame * sheet.frameWidthPx;
-  const sourceY = 0;
+  const sourceY = row * sheet.frameHeightPx;
   const drawWidthPx = sheet.frameWidthPx * scale;
   const drawHeightPx = sheet.frameHeightPx * scale;
 
@@ -73,17 +74,39 @@ export function drawSprite(
   );
 }
 
+// Auto-tile neighbor bitmask: top=1, right=2, bottom=4, left=8
+// Maps bitmask -> sprite index on row 2 of the sprite sheet
+const autoTileMap: Record<number, { row: number; index: number }> = {
+  0b0000: { row: 0, index: 4 },  // no neighbors
+  0b0001: { row: 1, index: 0 },  // top only
+  0b0011: { row: 1, index: 1 },  // top + right
+  0b1001: { row: 1, index: 2 },  // left + top
+  0b1100: { row: 1, index: 3 },  // left + bottom
+  0b0010: { row: 1, index: 4 },  // right only
+  0b1000: { row: 1, index: 5 },  // left only
+  0b0110: { row: 1, index: 6 },  // bottom + right
+  0b0100: { row: 1, index: 7 },  // bottom only
+  0b1010: { row: 1, index: 8 },  // left + right
+  0b0101: { row: 1, index: 9 },  // top + bottom
+};
+
 export function drawWall(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
   i: number,
   shadow = false,
+  neighborMask = -1,
 ) {
-  const wallIndexes = [0, 1, 2, 3];
-  const spriteIndex = wallIndexes[i % wallIndexes.length]!;
   const tileScale = 1.01 / sheet.frameWidthPx;
-  drawSprite(ctx, spriteIndex, x - 0.5, y - 0.5, tileScale, shadow);
+  if (neighborMask >= 0 && neighborMask in autoTileMap) {
+    const tile = autoTileMap[neighborMask]!;
+    drawSprite(ctx, tile.index, x - 0.5, y - 0.5, tileScale, shadow, tile.row);
+  } else {
+    const wallIndexes = [0, 1, 2, 3];
+    const spriteIndex = wallIndexes[i % wallIndexes.length]!;
+    drawSprite(ctx, spriteIndex, x - 0.5, y - 0.5, tileScale, shadow);
+  }
 }
 
 export function drawBurger(

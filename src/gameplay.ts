@@ -657,6 +657,14 @@ export function draw(state: State, ctx: CanvasRenderingContext2D) {
     const SHADOW_OFFSET = 0.12;
     const SHADOW_Z = -0.5; // between everything and floor
 
+    // Build set of wall/glass neighbor positions for auto-tiling
+    const wallNeighborSet = new Set<string>();
+    for (const e of state.entities) {
+      if (e.type === "wall" || (e.type === "glass" && e.glassState !== 2)) {
+        wallNeighborSet.add(`${e.x},${e.y}`);
+      }
+    }
+
     for (const entity of state.entities) {
       if (entity.type === "none") continue;
 
@@ -686,8 +694,14 @@ export function draw(state: State, ctx: CanvasRenderingContext2D) {
         }
         case "wall": {
           const { x, y, index: i, z } = entity;
-          submitShadow((ctx) => drawWall(ctx, x, y, i, true));
-          Renderer.submit(z, (ctx) => drawWall(ctx, x, y, i));
+          // Compute neighbor bitmask for auto-tiling: top=1, right=2, bottom=4, left=8
+          let mask = 0;
+          if (wallNeighborSet.has(`${x},${y - 1}`)) mask |= 1;
+          if (wallNeighborSet.has(`${x + 1},${y}`)) mask |= 2;
+          if (wallNeighborSet.has(`${x},${y + 1}`)) mask |= 4;
+          if (wallNeighborSet.has(`${x - 1},${y}`)) mask |= 8;
+          submitShadow((ctx) => drawWall(ctx, x, y, i, true, mask));
+          Renderer.submit(z, (ctx) => drawWall(ctx, x, y, i, false, mask));
           break;
         }
         case "burger": {
