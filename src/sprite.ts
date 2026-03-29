@@ -107,9 +107,11 @@ export function drawGlass(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
+  glassState: 0 | 1 | 2,
   shadow = false,
 ) {
-  const glassIndex = 21;
+  const glassIndexByState = [21, 22, 23] as const;
+  const glassIndex = glassIndexByState[glassState];
   const tileScale = 1.01 / sheet.frameWidthPx;
   drawSprite(ctx, glassIndex, x - 0.5, y - 0.5, tileScale, shadow);
 }
