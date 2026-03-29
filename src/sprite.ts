@@ -170,6 +170,25 @@ export function drawPlayer(ctx: CanvasRenderingContext2D, entity: Entity) {
   const drawX = entity.x - drawW / 2;
   const drawY = entity.y + entity.animatedH / 2 - drawH;
 
+  if (entity.flipX) {
+    ctx.save();
+    ctx.translate(entity.x, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(
+      playerSheetImage,
+      frame.x,
+      frame.y,
+      frame.w,
+      frame.h,
+      drawX - entity.x,
+      drawY,
+      drawW,
+      drawH,
+    );
+    ctx.restore();
+    return;
+  }
+
   ctx.drawImage(
     playerSheetImage,
     frame.x,

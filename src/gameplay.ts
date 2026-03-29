@@ -58,7 +58,7 @@ function prepLevel(index: number) {
       }
     }
   }
-  for (const { entity, x, y } of parsed.entities) {
+  for (const { entity, x, y, flipX } of parsed.entities) {
     createEntity({
       type: entity,
       x,
@@ -66,6 +66,7 @@ function prepLevel(index: number) {
       w: 1,
       h: 1,
       z: entity === "player" ? 10 : 0,
+      flipX: flipX ?? false,
     });
   }
   return parsed;
@@ -116,9 +117,11 @@ export function update(state: State, dt: number) {
       if (justMoved.left()) {
         state.pendingUndoSnapshot = structuredClone(state.entities);
         player.vx = -1;
+        player.flipX = true;
       } else if (justMoved.right()) {
         state.pendingUndoSnapshot = structuredClone(state.entities);
         player.vx = 1;
+        player.flipX = false;
       } else if (justMoved.up()) {
         state.pendingUndoSnapshot = structuredClone(state.entities);
         player.vy = -1;
@@ -274,6 +277,7 @@ export function update(state: State, dt: number) {
               w: 0.5,
               h: 0.5,
               z: -1,
+              flipX: toilet.flipX,
             });
             removeEntity(toilet.index);
             entity.goalW -= burgerSizeChangeAmount;
@@ -460,11 +464,7 @@ export function draw(state: State, ctx: CanvasRenderingContext2D) {
         case "toilet":
         case "poop": {
           const isStinky = entity.type === "poop";
-          const isWallToLeft = state.entities.some(
-            (e) =>
-              e.type === "wall" && e.x === entity.x - 1 && e.y === entity.y,
-          );
-          if (isWallToLeft) {
+          if (entity.flipX) {
             ctx.save();
             ctx.translate(entity.x, entity.y);
             ctx.scale(-1, 1);

@@ -47,8 +47,15 @@ function addDebugControl() {
     if (level) {
       const parsed = parseLevel(level.trim());
       clearAllEntities();
-      for (const { entity, x, y } of parsed.entities) {
-        createEntity({ type: entity, x, y, w: 1, h: 1 });
+      for (const { entity, x, y, flipX } of parsed.entities) {
+        createEntity({
+          type: entity,
+          x,
+          y,
+          w: 1,
+          h: 1,
+          flipX: flipX ?? false,
+        });
       }
     }
   };
