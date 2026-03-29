@@ -473,9 +473,37 @@ export function drawPlayer(
 
 // todo probably pre-bake these multi-tile subtile things
 // or at least just compute once per level instead of every draw
-export function drawFloor(ctx: CanvasRenderingContext2D, entity: Entity) {
+/**
+ * @param floorMask - If > 0, this is a wall-floor: only draw nine-patch sections
+ *   facing non-wall neighbors. Bitmask: top=1, right=2, bottom=4, left=8.
+ *   0 means draw the full floor tile.
+ */
+export function drawFloor(ctx: CanvasRenderingContext2D, entity: Entity, floorMask = 0) {
   const { x, y, index } = entity;
   const floorSubdivisionCount = 4;
+  const half = 0.5;
+
+  if (floorMask > 0) {
+    // Clip to half-tile strips facing each adjacent floor.
+    // Each side that has a floor neighbor gets a half-tile-wide strip on that edge.
+    // Corners are included when both adjacent edges have floors.
+    const hasTop = (floorMask & 1) !== 0;
+    const hasRight = (floorMask & 2) !== 0;
+    const hasBottom = (floorMask & 4) !== 0;
+    const hasLeft = (floorMask & 8) !== 0;
+
+    ctx.save();
+    ctx.beginPath();
+    const tileLeft = x - 0.5;
+    const tileTop = y - 0.5;
+    // Add a rect for each side that faces a floor
+    if (hasTop) ctx.rect(tileLeft, tileTop, 1.01, half);
+    if (hasBottom) ctx.rect(tileLeft, tileTop + half, 1.01, half + 0.01);
+    if (hasLeft) ctx.rect(tileLeft, tileTop, half, 1.01);
+    if (hasRight) ctx.rect(tileLeft + half, tileTop, half + 0.01, 1.01);
+    ctx.clip();
+  }
+
   ctx.fillStyle = "#f0f0f2";
   ctx.fillRect(x - 0.5, y - 0.5, 1.01, 1.01);
   const opacities = [0.3, 0.4, 0.2, 0.6, 0.35, 0.4, 0.3, 0.4, 0.25, 0.6, 0.35];
@@ -512,5 +540,9 @@ export function drawFloor(ctx: CanvasRenderingContext2D, entity: Entity) {
       );
       ctx.restore();
     }
+  }
+
+  if (floorMask > 0) {
+    ctx.restore();
   }
 }
