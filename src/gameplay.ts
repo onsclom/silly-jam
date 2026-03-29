@@ -25,9 +25,11 @@ import {
   drawFloor,
   drawGlass,
   drawPlayer,
+  drawSheetCellCentered,
   drawToilet,
   drawWall,
   sheet,
+  tutorialArrowSpriteByKey,
 } from "./sprite";
 import { state } from "./state";
 import * as Renderer from "./renderer";
@@ -1052,7 +1054,8 @@ function drawControlsTutorial(
 
     // origin position + gentle oscillation around it
     const bobX = Math.sin(t * key.bobSpeedX + key.bobPhase) * key.bobRadiusX;
-    const bobY = Math.cos(t * key.bobSpeedY + key.bobPhase * 1.3) * key.bobRadiusY;
+    const bobY =
+      Math.cos(t * key.bobSpeedY + key.bobPhase * 1.3) * key.bobRadiusY;
     const screenX = cx + key.originX * spacing + bobX;
     const screenY = cy + key.originY * spacing + bobY;
 
@@ -1077,16 +1080,27 @@ function drawControlsTutorial(
     ctx.lineWidth = ks * 0.04;
     ctx.stroke();
 
-    // label
-    ctx.font = `bold ${ks * 0.5}px handwriting`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillStyle = "white";
-    ctx.fillText(key.label, 0, 0);
+    const arrowSprite = tutorialArrowSpriteByKey[key.keys[0]!];
+    const iconSize = ks * 1.3;
+    if (arrowSprite && sheet.image.complete) {
+      drawSheetCellCentered(
+        ctx,
+        arrowSprite.index,
+        arrowSprite.row,
+        0,
+        0,
+        iconSize,
+      );
+    } else {
+      ctx.font = `bold ${ks * 0.5}px handwriting`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillStyle = "white";
+      ctx.fillText(key.label, 0, 0);
+    }
 
     ctx.restore();
   }
-
 }
 
 function drawTitleScreen(
@@ -1110,8 +1124,8 @@ function drawTitleScreen(
     ctx.scale(playerScale, playerScale);
     const wobble = Math.sin(state.elapsedSeconds * 2) * 0.05;
     ctx.rotate(wobble);
-    // frame 1 = first 330×330 cell (left)
-    drawBurgerBoyFrame(ctx, 0, 0, 0, playerSize);
+    const frameIndex = Math.floor(t / 0.5) % 2;
+    drawBurgerBoyFrame(ctx, frameIndex, 0, 0, playerSize);
     ctx.restore();
   }
 
