@@ -89,6 +89,13 @@ export const state = {
   undoStack: [] as Entity[][],
   pendingUndoSnapshot: null as Entity[] | null,
   undoTextOpacity: 0,
+  winScreen: false,
+  winScreenTime: 0,
+  levelTime: 0,
+  moves: 0,
+  undos: 0,
+  restarts: 0,
+  winStats: { time: 0, moves: 0, undos: 0, restarts: 0 },
 };
 
 export type State = typeof state;
