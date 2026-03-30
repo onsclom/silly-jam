@@ -15,24 +15,18 @@ import {
   justPressedUndo,
 } from "./inputs";
 import * as Camera from "./camera";
-import { isColliding, expDecay, clamp } from "./util";
+import { isColliding, expDecay, clamp } from "./helpers";
 import { parseLevel } from "./parser";
 import { levels } from "./levels/levels";
 import {
-  drawArtwork,
+  ENTITY_DRAW_FNS,
   bakeStaticLayer,
   drawBakedFloorLayer,
   drawBakedWallLayer,
   drawBakedWallShadowLayer,
   burgerBoySheet,
-  drawBurger,
   drawBurgerBoyFrame,
-  drawCrumbs,
-  drawGlass,
-  drawGlassShatterFx,
-  drawPlayer,
   drawSheetCellCentered,
-  drawToilet,
   sheet,
   tutorialArrowSpriteByKey,
 } from "./sprite";
@@ -63,19 +57,13 @@ function startTransition(level: number) {
 }
 
 function updateControlsTutorial(state: State, dt: number) {
-  for (const pressedKey of state.justPressed) {
-    const isTutorialKey = state.tutorialKeys.some((key) =>
-      key.keys.includes(pressedKey),
-    );
-    if (isTutorialKey) tutorialKeySound();
-  }
-
   for (const key of state.tutorialKeys) {
     if (!key.popped) {
       const wasPressed = state.justPressed.some((k) => key.keys.includes(k));
       if (wasPressed) {
         key.popped = true;
         key.popTime = state.elapsedSeconds;
+        tutorialKeySound();
       }
     }
 
@@ -143,6 +131,11 @@ function populateEntitiesFromParsedLevel(
     }
   }
   for (const { entity, x, y, flipX } of parsed.entities) {
+    const hasShadow =
+      entity === "player" ||
+      entity === "burger" ||
+      entity === "glass" ||
+      entity === "toilet";
     createEntity({
       type: entity,
       x,
@@ -151,6 +144,7 @@ function populateEntitiesFromParsedLevel(
       h: 1,
       z: entity === "player" ? 10 : 0,
       flipX: flipX ?? false,
+      hasShadow,
     });
   }
 
@@ -222,11 +216,6 @@ export function update(state: State, dt: number) {
   // --- Title screen phase ---
   if (state.gamePhase === "title") {
     state.titleTime += dt / 1000;
-    if (DEBUG && state.justPressed.includes("e")) {
-      state.gamePhase = "gameplay";
-      startTransition(0);
-      return;
-    }
     if (state.titleTime > 0.5 && state.justPressed.length > 0) {
       state.gamePhase = "gameplay";
       startTransition(0);
@@ -249,7 +238,9 @@ export function update(state: State, dt: number) {
         undos: state.undos,
         restarts: state.restarts,
       };
-      state.level = state.transitionLevel!;
+      if (state.transitionLevel === null)
+        throw new Error("transitionLevel is null");
+      state.level = state.transitionLevel;
       prepLevel(state.level);
       if (isRestart) {
         state.levelTime = savedStats.levelTime;
@@ -595,6 +586,7 @@ export function update(state: State, dt: number) {
               h: 0.5,
               z: -1,
               flipX: toilet.flipX,
+              isStinky: true,
             });
             removeEntity(toilet.index);
             entity.goalW -= burgerSizeChangeAmount;
@@ -729,6 +721,7 @@ export function update(state: State, dt: number) {
             w: 1,
             h: 1,
             z: 0,
+            hasShadow: true,
           });
         }
       }
@@ -851,75 +844,11 @@ export function draw(state: State, ctx: CanvasRenderingContext2D) {
             });
           };
 
-      switch (entity.type) {
-        case "player": {
-          const e = entity;
-          submitShadow((ctx) => drawPlayer(ctx, e, true));
-          Renderer.submit(entity.z, (ctx) => drawPlayer(ctx, e));
-          break;
-        }
-        case "artwork": {
-          const { x, y, z, artworkSpriteIndex } = entity;
-          Renderer.submit(z, (ctx) =>
-            drawArtwork(ctx, x, y, artworkSpriteIndex),
-          );
-          break;
-        }
-        case "burger": {
-          const { x, y, z } = entity;
-          submitShadow((ctx) => drawBurger(ctx, x, y, true));
-          Renderer.submit(z, (ctx) => drawBurger(ctx, x, y));
-          break;
-        }
-        case "glass": {
-          const { x, y, z, glassState } = entity;
-          submitShadow((ctx) => drawGlass(ctx, x, y, glassState, true));
-          Renderer.submit(z, (ctx) => drawGlass(ctx, x, y, glassState));
-          break;
-        }
-        case "glassShatterFx": {
-          const { x, y, z, flipX, shatterFxStartedAt } = entity;
-          Renderer.submit(z, (ctx) => {
-            if (flipX) {
-              ctx.save();
-              ctx.translate(x, y);
-              ctx.scale(-1, 1);
-              drawGlassShatterFx(ctx, 0, 0, shatterFxStartedAt);
-              ctx.restore();
-              return;
-            }
-            drawGlassShatterFx(ctx, x, y, shatterFxStartedAt);
-          });
-          break;
-        }
-        case "toilet":
-        case "poop": {
-          const { x, y, z, flipX } = entity;
-          const isStinky = entity.type === "poop";
-          const drawIt = (ctx: CanvasRenderingContext2D, shadow = false) => {
-            ctx.save();
-            if (isStinky) ctx.globalAlpha = 0.4;
-            if (flipX) {
-              ctx.save();
-              ctx.translate(x, y);
-              ctx.scale(-1, 1);
-              drawToilet(ctx, 0, 0, isStinky, shadow);
-              ctx.restore();
-            } else {
-              drawToilet(ctx, x, y, isStinky, shadow);
-            }
-            ctx.restore();
-          };
-          if (!isStinky) submitShadow((ctx) => drawIt(ctx, true));
-          Renderer.submit(z, (ctx) => drawIt(ctx));
-          break;
-        }
-        case "plate": {
-          const { x, y, index: i, z } = entity;
-          Renderer.submit(z, (ctx) => drawCrumbs(ctx, x, y, i));
-          break;
-        }
-      }
+      const drawFn = ENTITY_DRAW_FNS[entity.type];
+      if (!drawFn) continue;
+      const e = entity;
+      if (e.hasShadow) submitShadow((ctx) => drawFn(ctx, e, true));
+      Renderer.submit(e.z, (ctx) => drawFn(ctx, e));
     }
 
     Renderer.flush(ctx);

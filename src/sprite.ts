@@ -305,10 +305,10 @@ export function drawWall(
 
 export function drawBurger(
   ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
+  entity: Entity,
   shadow = false,
 ) {
+  const { x, y } = entity;
   const rotate = Math.floor(state.elapsedSeconds * 3) % 2 === 0;
   const burgerIndex = 8;
   const tileScale = 1 / sheet.frameWidthPx;
@@ -322,11 +322,10 @@ export function drawBurger(
 
 export function drawGlass(
   ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  glassState: 0 | 1 | 2,
+  entity: Entity,
   shadow = false,
 ) {
+  const { x, y, glassState } = entity;
   const glassIndexByState = [21, 22, 23] as const;
   const glassIndex = glassIndexByState[glassState];
   const tileScale = 1.01 / sheet.frameWidthPx;
@@ -335,59 +334,63 @@ export function drawGlass(
 
 export function drawGlassShatterFx(
   ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  startedAt: number,
+  entity: Entity,
 ) {
+  const { x, y, flipX, shatterFxStartedAt } = entity;
   const frameDuration = 1 / 12;
   const frameCount = 3;
-  const elapsed = Math.max(0, state.elapsedSeconds - startedAt);
+  const elapsed = Math.max(0, state.elapsedSeconds - shatterFxStartedAt);
   const frame = Math.min(frameCount - 1, Math.floor(elapsed / frameDuration));
   const spriteIndex = 5 + frame;
   const scaleByFrame = [1, 0.75, 0.5] as const;
   const size = scaleByFrame[frame]! * 1.01;
-  drawSprite(
-    ctx,
-    spriteIndex,
-    x - size / 2,
-    y + 0.5 - size,
-    size / sheet.frameWidthPx,
-    false,
-    0,
-  );
+  if (flipX) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(-1, 1);
+    drawSprite(ctx, spriteIndex, -size / 2, 0.5 - size, size / sheet.frameWidthPx, false, 0);
+    ctx.restore();
+  } else {
+    drawSprite(ctx, spriteIndex, x - size / 2, y + 0.5 - size, size / sheet.frameWidthPx, false, 0);
+  }
 }
 
 export function drawToilet(
   ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  stinky: boolean,
+  entity: Entity,
   shadow = false,
 ) {
+  const { x, y, flipX, isStinky } = entity;
   const toiletIndex = 9;
-  if (!stinky) {
-    drawSprite(
-      ctx,
-      toiletIndex,
-      x - 0.5,
-      y - 0.5,
-      1 / sheet.frameWidthPx,
-      shadow,
-    );
-    return;
+
+  ctx.save();
+  if (isStinky) ctx.globalAlpha = 0.4;
+  if (flipX) {
+    ctx.translate(x, y);
+    ctx.scale(-1, 1);
+    if (!isStinky) {
+      drawSprite(ctx, toiletIndex, -0.5, -0.5, 1 / sheet.frameWidthPx, shadow);
+    } else {
+      const indexModifier = Math.floor(state.elapsedSeconds) % 2 === 0 ? 1 : 2;
+      drawSprite(ctx, toiletIndex + indexModifier, -0.5, -0.5, 1 / sheet.frameWidthPx, shadow);
+    }
+  } else {
+    if (!isStinky) {
+      drawSprite(ctx, toiletIndex, x - 0.5, y - 0.5, 1 / sheet.frameWidthPx, shadow);
+    } else {
+      const indexModifier = Math.floor(state.elapsedSeconds) % 2 === 0 ? 1 : 2;
+      drawSprite(ctx, toiletIndex + indexModifier, x - 0.5, y - 0.5, 1 / sheet.frameWidthPx, shadow);
+    }
   }
-  const indexModifier = Math.floor(state.elapsedSeconds) % 2 === 0 ? 1 : 2;
-  const index = toiletIndex + indexModifier;
-  drawSprite(ctx, index, x - 0.5, y - 0.5, 1 / sheet.frameWidthPx, shadow);
+  ctx.restore();
 }
 
 export function drawCrumbs(
   ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  i: number,
+  entity: Entity,
   shadow = false,
 ) {
+  const { x, y, index: i } = entity;
   const crumbIndexes = [16, 17, 18];
   const index = crumbIndexes[i % crumbIndexes.length]!;
   drawSprite(ctx, index, x - 0.5, y - 0.5, 1 / sheet.frameWidthPx, shadow);
@@ -395,11 +398,10 @@ export function drawCrumbs(
 
 export function drawArtwork(
   ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  artworkSpriteIndex: number,
+  entity: Entity,
   shadow = false,
 ) {
+  const { x, y, artworkSpriteIndex } = entity;
   drawSprite(
     ctx,
     artworkSpriteIndex,
@@ -579,6 +581,19 @@ export function drawPlayer(
 
   ctx.restore();
 }
+
+export type EntityDrawFn = (ctx: CanvasRenderingContext2D, entity: Entity, shadow?: boolean) => void;
+
+export const ENTITY_DRAW_FNS: Partial<Record<Entity["type"], EntityDrawFn>> = {
+  player: drawPlayer,
+  artwork: drawArtwork,
+  burger: drawBurger,
+  glass: drawGlass,
+  glassShatterFx: drawGlassShatterFx as EntityDrawFn,
+  toilet: drawToilet,
+  poop: drawToilet,
+  plate: drawCrumbs,
+};
 
 // --- Baked static layer (floors + walls rendered once per level) ---
 

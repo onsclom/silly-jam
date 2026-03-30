@@ -2,13 +2,11 @@ import { gamepads } from "@spud.gg/api";
 import { parseLevel } from "./parser";
 import { levels } from "./levels/levels";
 import {
+  ENTITY_DRAW_FNS,
   bakeStaticLayer,
   drawBakedFloorLayer,
   drawBakedWallLayer,
   drawBakedWallShadowLayer,
-  drawBurger,
-  drawGlass,
-  drawToilet,
 } from "./sprite";
 import { clearAllEntities, createEntity, state } from "./state";
 import { draw, rebuildLevelFromText, update } from "./gameplay";
@@ -485,48 +483,26 @@ export function startEditor(canvas: HTMLCanvasElement) {
           )
             continue;
 
-          switch (entity.type) {
-            case "player": {
-              const { x, y, z } = entity;
-              Renderer.submit(z, (ctx) => {
-                ctx.save();
-                ctx.fillStyle = "#ff6644";
-                ctx.beginPath();
-                ctx.arc(x, y, 0.35, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.fillStyle = "white";
-                ctx.font = "0.35px monospace";
-                ctx.textAlign = "center";
-                ctx.textBaseline = "middle";
-                ctx.fillText("@", x, y + 0.05);
-                ctx.restore();
-              });
-              break;
-            }
-            case "burger": {
-              const { x, y, z } = entity;
-              Renderer.submit(z, (ctx) => drawBurger(ctx, x, y));
-              break;
-            }
-            case "glass": {
-              const { x, y, z, glassState } = entity;
-              Renderer.submit(z, (ctx) => drawGlass(ctx, x, y, glassState));
-              break;
-            }
-            case "toilet": {
-              const { x, y, z, flipX } = entity;
-              Renderer.submit(z, (ctx) => {
-                if (flipX) {
-                  ctx.save();
-                  ctx.translate(x, y);
-                  ctx.scale(-1, 1);
-                  drawToilet(ctx, 0, 0, false);
-                  ctx.restore();
-                } else {
-                  drawToilet(ctx, x, y, false);
-                }
-              });
-              break;
+          if (entity.type === "player") {
+            const { x, y, z } = entity;
+            Renderer.submit(z, (ctx) => {
+              ctx.save();
+              ctx.fillStyle = "#ff6644";
+              ctx.beginPath();
+              ctx.arc(x, y, 0.35, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.fillStyle = "white";
+              ctx.font = "0.35px monospace";
+              ctx.textAlign = "center";
+              ctx.textBaseline = "middle";
+              ctx.fillText("@", x, y + 0.05);
+              ctx.restore();
+            });
+          } else {
+            const drawFn = ENTITY_DRAW_FNS[entity.type];
+            if (drawFn) {
+              const e = entity;
+              Renderer.submit(e.z, (ctx) => drawFn(ctx, e));
             }
           }
         }
