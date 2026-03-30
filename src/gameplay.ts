@@ -95,23 +95,13 @@ function wrapLevel(index: number) {
   return ((index % levels.length) + levels.length) % levels.length;
 }
 
-function prepLevel(index: number) {
-  const parsed = parseLevel(levels[index]!);
+function populateEntitiesFromParsedLevel(
+  parsed: ReturnType<typeof parseLevel>,
+  isLastLevel: boolean,
+) {
   clearAllEntities();
-  state.undoStack = [];
-  state.pendingUndoSnapshot = null;
-  state.levelTime = 0;
-  state.moves = 0;
-  state.undos = 0;
-  state.restarts = 0;
-
-  // reset game stats when starting from level 0
-  if (index === 0) {
-    state.gameStats = { time: 0, moves: 0, undos: 0, restarts: 0 };
-  }
 
   // floodfill floor tiles from player start, bounded by walls
-  const isLastLevel = index === levels.length - 1;
   const walls = new Set<string>();
   const floodBarriers = new Set<string>();
   let playerStart: { x: number; y: number } | null = null;
@@ -187,6 +177,30 @@ function prepLevel(index: number) {
   }
 
   bakeStaticLayer(state.entities, SHADOW_OFFSET);
+}
+
+export function rebuildLevelFromText(levelText: string, isLastLevel = false) {
+  const parsed = parseLevel(levelText);
+  populateEntitiesFromParsedLevel(parsed, isLastLevel);
+  return parsed;
+}
+
+function prepLevel(index: number) {
+  const parsed = parseLevel(levels[index]!);
+  state.undoStack = [];
+  state.pendingUndoSnapshot = null;
+  state.levelTime = 0;
+  state.moves = 0;
+  state.undos = 0;
+  state.restarts = 0;
+
+  // reset game stats when starting from level 0
+  if (index === 0) {
+    state.gameStats = { time: 0, moves: 0, undos: 0, restarts: 0 };
+  }
+
+  const isLastLevel = index === levels.length - 1;
+  populateEntitiesFromParsedLevel(parsed, isLastLevel);
 
   return parsed;
 }
