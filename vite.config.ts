@@ -6,6 +6,8 @@ import { ViteImageOptimizer } from "vite-plugin-image-optimizer";
 const dir = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
+  // Use relative asset URLs so dist can run from file:// or nested paths.
+  base: "./",
   build: {
     modulePreload: {
       polyfill: false,
