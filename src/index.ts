@@ -4,41 +4,46 @@ import { state } from "./state";
 import { resizeCanvasForDpi } from "./helpers";
 import { clearInputs } from "./inputs";
 import { levels } from "./levels/levels";
+import { startEditor } from "./editor";
 
 const canvas = document.createElement("canvas");
 document.body.appendChild(canvas);
 
 const ctx = canvas.getContext("2d", { alpha: false })!;
 
-if (import.meta.env.DEV || window.location.hash === "#debug") {
-  addDebugControl();
-}
-
-let lastFrameTime = 0;
-let timeToProcessPhysics = 0;
-
-function gameLoop(now: number) {
-  const dt = Math.min(now - lastFrameTime, 100); // clamp time delta to 100ms in case the user switched tabs
-  lastFrameTime = now;
-
-  resizeCanvasForDpi(ctx);
-
-  {
-    timeToProcessPhysics += dt;
-    const physicsTickMs = 1000 / 500; // need to allow fast movement speed without glitches
-    while (timeToProcessPhysics > physicsTickMs) {
-      timeToProcessPhysics -= physicsTickMs;
-      update(state, physicsTickMs);
-      gamepads.clearInputs();
-      clearInputs();
-    }
+if (window.location.hash === "#editor") {
+  startEditor(canvas);
+} else {
+  if (import.meta.env.DEV || window.location.hash === "#debug") {
+    addDebugControl();
   }
 
-  draw(state, ctx);
-  requestAnimationFrame(gameLoop); // queue up the next tick
-}
+  let lastFrameTime = 0;
+  let timeToProcessPhysics = 0;
 
-requestAnimationFrame(gameLoop);
+  function gameLoop(now: number) {
+    const dt = Math.min(now - lastFrameTime, 100); // clamp time delta to 100ms in case the user switched tabs
+    lastFrameTime = now;
+
+    resizeCanvasForDpi(ctx);
+
+    {
+      timeToProcessPhysics += dt;
+      const physicsTickMs = 1000 / 500; // need to allow fast movement speed without glitches
+      while (timeToProcessPhysics > physicsTickMs) {
+        timeToProcessPhysics -= physicsTickMs;
+        update(state, physicsTickMs);
+        gamepads.clearInputs();
+        clearInputs();
+      }
+    }
+
+    draw(state, ctx);
+    requestAnimationFrame(gameLoop); // queue up the next tick
+  }
+
+  requestAnimationFrame(gameLoop);
+}
 
 function addDebugControl() {
   const textarea = document.createElement("textarea");
