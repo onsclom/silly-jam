@@ -39,7 +39,7 @@ import {
 import { state } from "./state";
 import * as Renderer from "./renderer";
 
-const DEBUG = false;
+const DEBUG = import.meta.env.DEV || window.location.hash === "#debug";
 const SHADOWS_ENABLED = true; // @seb in case you don't like these
 const SHADOW_OFFSET = 0.12;
 const MAX_UNDO_STACK = 128;
