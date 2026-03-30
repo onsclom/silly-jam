@@ -210,6 +210,11 @@ export function update(state: State, dt: number) {
 
   // --- Controls tutorial phase ---
   if (state.gamePhase === "controls") {
+    if (DEBUG && state.justPressed.includes("e")) {
+      state.gamePhase = "gameplay";
+      startTransition(0);
+      return;
+    }
     updateControlsTutorial(state, dt);
     return;
   }
@@ -217,6 +222,11 @@ export function update(state: State, dt: number) {
   // --- Title screen phase ---
   if (state.gamePhase === "title") {
     state.titleTime += dt / 1000;
+    if (DEBUG && state.justPressed.includes("e")) {
+      state.gamePhase = "gameplay";
+      startTransition(0);
+      return;
+    }
     if (state.titleTime > 0.5 && state.justPressed.length > 0) {
       state.gamePhase = "gameplay";
       startTransition(0);
