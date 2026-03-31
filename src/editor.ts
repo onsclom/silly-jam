@@ -451,6 +451,12 @@ export function startEditor(canvas: HTMLCanvasElement, initialLevel?: string) {
         exitPlay();
         e.preventDefault();
       }
+      if (e.key === "r") {
+        // Remove from input state so gameplay's justPressedRestart doesn't fire
+        state.justPressed = state.justPressed.filter((k) => k !== "r");
+        enterPlay();
+        e.preventDefault();
+      }
       return;
     }
     const toolByKey: Record<string, Tool> = {
