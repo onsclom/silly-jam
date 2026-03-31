@@ -13,6 +13,9 @@ const ctx = canvas.getContext("2d", { alpha: false })!;
 
 if (window.location.hash === "#editor") {
   startEditor(canvas);
+} else if (new URLSearchParams(window.location.search).has("level")) {
+  const levelText = new URLSearchParams(window.location.search).get("level")!.trim();
+  startEditor(canvas, levelText);
 } else {
   if (import.meta.env.DEV || window.location.hash === "#debug") {
     addDebugControl();

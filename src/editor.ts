@@ -136,7 +136,7 @@ function setCell(x: number, y: number, tool: Tool) {
   rebuildPreview();
 }
 
-export function startEditor(canvas: HTMLCanvasElement) {
+export function startEditor(canvas: HTMLCanvasElement, initialLevel?: string) {
   const ctx = canvas.getContext("2d", { alpha: false })!;
 
   // Build UI
@@ -285,6 +285,37 @@ export function startEditor(canvas: HTMLCanvasElement) {
   };
   uiContainer.appendChild(copyBtn);
 
+  // Load Level button
+  const loadBtn = document.createElement("button");
+  loadBtn.textContent = "Load Level";
+  loadBtn.classList.add("editor-only");
+  loadBtn.style.cssText =
+    "font-family: monospace; font-size: 12px; padding: 4px 8px; cursor: pointer; border: 1px solid #666; border-radius: 4px; background: #335; color: white;";
+  loadBtn.onclick = () => {
+    const input = prompt("Paste level string:");
+    if (input && input.trim()) {
+      loadLevelToGrid(input.trim());
+      levelSelect.value = "new";
+      rebuildPreview();
+    }
+  };
+  uiContainer.appendChild(loadBtn);
+
+  // Share Link button
+  const shareBtn = document.createElement("button");
+  shareBtn.textContent = "Share Link";
+  shareBtn.classList.add("editor-only");
+  shareBtn.style.cssText =
+    "font-family: monospace; font-size: 12px; padding: 4px 8px; cursor: pointer; border: 1px solid #666; border-radius: 4px; background: #353; color: white;";
+  shareBtn.onclick = () => {
+    const encoded = encodeURIComponent(gridToText());
+    const url = `${window.location.origin}${window.location.pathname}?level=${encoded}`;
+    navigator.clipboard.writeText(url);
+    shareBtn.textContent = "Link Copied!";
+    setTimeout(() => (shareBtn.textContent = "Share Link"), 1500);
+  };
+  uiContainer.appendChild(shareBtn);
+
   // Play/Edit toggle button
   const playBtn = document.createElement("button");
   playBtn.textContent = "Play";
@@ -299,9 +330,14 @@ export function startEditor(canvas: HTMLCanvasElement) {
   sizeLabel.style.cssText = "opacity: 0.6;";
   uiContainer.appendChild(sizeLabel);
 
-  // Load first level
-  loadLevelToGrid(levels[0]!);
-  levelSelect.value = "0";
+  // Load initial level
+  if (initialLevel) {
+    loadLevelToGrid(initialLevel);
+    levelSelect.value = "new";
+  } else {
+    loadLevelToGrid(levels[0]!);
+    levelSelect.value = "0";
+  }
   rebuildPreview();
 
   // Camera for editor
@@ -531,4 +567,9 @@ export function startEditor(canvas: HTMLCanvasElement) {
   }
 
   requestAnimationFrame(loop);
+
+  // Auto-enter play mode for shared levels (after loop starts)
+  if (initialLevel) {
+    requestAnimationFrame(() => enterPlay());
+  }
 }
